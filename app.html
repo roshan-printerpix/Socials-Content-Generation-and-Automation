@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Prompt Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .input-section {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .prompt-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 40px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .enhanced-prompt {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 200px;
+            margin-bottom: 15px;
+            transition: border-color 0.3s;
+            background-color: #f9fafb;
+            font-family: inherit;
+        }
+
+        .enhanced-prompt-container,
+        .caption-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .enhanced-prompt-container .enhanced-prompt {
+            border: none;
+            border-radius: 0;
+            margin-bottom: 0;
+            background-color: white;
+        }
+
+        .caption-container .post-content-input {
+            border: none;
+            border-radius: 0;
+            min-height: 80px;
+        }
+
+        .enhanced-prompt:focus {
+            outline: none;
+            border-color: #e90b75;
+            background-color: white;
+            box-shadow: 0 0 0 3px rgba(233, 11, 117, 0.1);
+        }
+
+        .prompt-input:focus {
+            outline: none;
+            border-color: #e90b75;
+            box-shadow: 0 0 0 3px rgba(233, 11, 117, 0.1);
+        }
+
+        .generate-btn,
+        .enhance-btn {
+            background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            box-shadow: 0 4px 15px rgba(233, 11, 117, 0.3);
+        }
+
+        .enhance-btn {
+            background: linear-gradient(135deg, #f06292 0%, #e91e63 100%);
+            box-shadow: 0 4px 15px rgba(240, 98, 146, 0.3);
+        }
+
+        .generate-btn:disabled,
+        .enhance-btn:disabled {
+            background: linear-gradient(135deg, #bdbdbd 0%, #9e9e9e 100%);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .generate-btn:hover:not(:disabled),
+        .enhance-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 11, 117, 0.4);
+        }
+
+        .enhance-btn:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(240, 98, 146, 0.4);
+        }
+
+        .results-section {
+            padding: 20px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .result-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-card.selected {
+            border: 3px solid #e90b75;
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(233, 11, 117, 0.3);
+            z-index: 10;
+        }
+
+        .result-header {
+            padding: 15px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-align: center;
+            color: #374151;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .expand-icon {
+            position: absolute;
+            left: 15px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        .expand-icon:hover {
+            opacity: 1;
+        }
+
+        .dall-e {
+            background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
+            color: white;
+        }
+
+        .openai {
+            background: linear-gradient(135deg, #f06292 0%, #e91e63 100%);
+            color: white;
+        }
+
+        .gemini {
+            background: linear-gradient(135deg, #ff4081 0%, #e91e63 100%);
+            color: white;
+        }
+
+        .result-image {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1 / 1;
+            background: #f9fafb;
+        }
+
+        .timing-info {
+            padding: 10px 15px;
+            background: #f8fafc;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.875rem;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #e90b75;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            color: #dc2626;
+            padding: 20px;
+            text-align: center;
+            background: #fef2f2;
+        }
+
+        .caption-section {}
+
+        .post-content-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 80px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .post-content-input:focus {
+            outline: none;
+            border-color: #e90b75;
+            box-shadow: 0 0 0 3px rgba(233, 11, 117, 0.1);
+        }
+
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(233, 11, 117, 0.3);
+            z-index: 100;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gear-icon {
+            width: 20px;
+            height: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .settings-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(233, 11, 117, 0.4);
+        }
+
+        .settings-btn:hover .gear-icon {
+            transform: rotate(90deg);
+        }
+
+        .settings-btn:active {
+            transform: translateY(-1px) scale(1.02);
+            box-shadow: 0 4px 15px rgba(233, 11, 117, 0.5);
+        }
+
+        .settings-btn:active .gear-icon {
+            transform: rotate(180deg);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-content {
+            padding: 20px;
+        }
+
+        .prompt-section {
+            margin-bottom: 30px;
+        }
+
+        .prompt-label {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 10px;
+            display: block;
+            font-size: 1.1rem;
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+            transition: border-color 0.3s;
+        }
+
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: #e90b75;
+            box-shadow: 0 0 0 3px rgba(233, 11, 117, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            padding: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .save-btn,
+        .cancel-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(233, 11, 117, 0.3);
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 11, 117, 0.4);
+        }
+
+        .cancel-btn {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+
+        .cancel-btn:hover {
+            background: #e5e7eb;
+        }
+    </style>
+</head>
+
+<body>
+    <button class="settings-btn" id="settingsBtn">
+        <svg class="gear-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path
+                d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97L2.46 14.6c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.31.61.22l2.49-1c.52.39 1.06.73 1.69.98l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.25 1.17-.59 1.69-.98l2.49 1c.22.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" />
+        </svg>
+    </button>
+
+    <div class="container">
+
+
+        <div class="input-section">
+            <textarea id="promptInput" class="prompt-input"
+                placeholder="Enter your basic prompt here... (e.g., 'Family enjoying photobook in living room, UK')"></textarea>
+            <div style="margin-bottom: 15px;">
+                <button id="enhanceBtn" class="enhance-btn" disabled>Enhance Prompt</button>
+            </div>
+            <div class="enhanced-prompt-container">
+                <textarea id="enhancedPrompt" class="enhanced-prompt"
+                    placeholder="Enhanced prompt will appear here... You can edit it before generating posts."></textarea>
+                <div id="enhancedTiming" class="timing-info" style="display: none;"></div>
+            </div>
+            <div style="margin-top: 15px;">
+                <button id="generateBtn" class="generate-btn" disabled>Generate Post</button>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <div class="results-grid">
+                <div class="result-card" data-model="imagen3">
+                    <div class="result-header gemini">
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15,3 21,3 21,9"></polyline>
+                            <polyline points="9,21 3,21 3,15"></polyline>
+                            <line x1="21" y1="3" x2="14" y2="10"></line>
+                            <line x1="3" y1="21" x2="10" y2="14"></line>
+                        </svg>
+                        Gemini Imagen 3
+                    </div>
+                    <div id="geminiResult" class="result-image">Enter a prompt to generate</div>
+                </div>
+
+                <div class="result-card" data-model="imagen4">
+                    <div class="result-header gemini">
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15,3 21,3 21,9"></polyline>
+                            <polyline points="9,21 3,21 3,15"></polyline>
+                            <line x1="21" y1="3" x2="14" y2="10"></line>
+                            <line x1="3" y1="21" x2="10" y2="14"></line>
+                        </svg>
+                        Gemini Imagen 4
+                    </div>
+                    <div id="gemini4Result" class="result-image">Enter a prompt to generate</div>
+                </div>
+
+                <div class="result-card" data-model="imagen4ultra">
+                    <div class="result-header gemini">
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15,3 21,3 21,9"></polyline>
+                            <polyline points="9,21 3,21 3,15"></polyline>
+                            <line x1="21" y1="3" x2="14" y2="10"></line>
+                            <line x1="3" y1="21" x2="10" y2="14"></line>
+                        </svg>
+                        Gemini Imagen 4 Ultra
+                    </div>
+                    <div id="gemini4UltraResult" class="result-image">Enter a prompt to generate</div>
+                </div>
+
+            </div>
+        </div>
+        <div class="caption-section" id="captionSection">
+            <div class="input-section">
+                <div class="caption-container">
+                    <textarea id="postContent" class="post-content-input"
+                        placeholder="Your Instagram post content will appear here..."></textarea>
+                    <div id="captionTiming" class="timing-info" style="display: none;"></div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button id="postBtn" class="generate-btn" disabled>Post to Instagram</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        class ImageGenerator {
+            constructor() {
+                this.promptInput = document.getElementById('promptInput');
+                this.enhancedPrompt = document.getElementById('enhancedPrompt');
+                this.enhanceBtn = document.getElementById('enhanceBtn');
+                this.generateBtn = document.getElementById('generateBtn');
+                this.geminiResult = document.getElementById('geminiResult');
+                this.gemini4Result = document.getElementById('gemini4Result');
+                this.gemini4UltraResult = document.getElementById('gemini4UltraResult');
+                this.captionSection = document.getElementById('captionSection');
+                this.postContent = document.getElementById('postContent');
+                this.captionTiming = document.getElementById('captionTiming');
+                this.enhancedTiming = document.getElementById('enhancedTiming');
+                this.postBtn = document.getElementById('postBtn');
+                this.settingsBtn = document.getElementById('settingsBtn');
+                this.selectedCard = null;
+
+                this.initEventListeners();
+            }
+
+            initEventListeners() {
+                this.enhanceBtn.addEventListener('click', () => this.enhancePrompt());
+                this.generateBtn.addEventListener('click', () => this.generateImages());
+                this.postBtn.addEventListener('click', () => this.postToInstagram());
+                this.settingsBtn.addEventListener('click', () => this.openSettingsModal());
+
+                // Enable/disable buttons based on input
+                this.promptInput.addEventListener('input', () => this.updateButtonStates());
+                this.enhancedPrompt.addEventListener('input', () => this.updateButtonStates());
+
+                this.promptInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                        this.generateImages();
+                    }
+                });
+
+                // Initial button state
+                this.updateButtonStates();
+                this.updatePostButtonState();
+
+                // Add click listeners for image selection
+                this.initImageSelection();
+            }
+
+            updateButtonStates() {
+                const hasBasicPrompt = this.promptInput.value.trim().length > 0;
+                const hasEnhancedPrompt = this.enhancedPrompt.value.trim().length > 0;
+
+                // Enable enhance button only if basic prompt exists
+                this.enhanceBtn.disabled = !hasBasicPrompt;
+
+                // Enable generate button if either basic or enhanced prompt exists
+                this.generateBtn.disabled = !hasBasicPrompt && !hasEnhancedPrompt;
+            }
+
+            async enhancePrompt() {
+                const basicPrompt = this.promptInput.value.trim();
+
+                if (!basicPrompt) {
+                    alert('Please enter a basic prompt first!');
+                    return;
+                }
+
+                this.enhanceBtn.disabled = true;
+                this.enhanceBtn.textContent = 'Enhancing...';
+
+                const startTime = Date.now();
+
+                try {
+                    const response = await fetch('/api/enhance-prompt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prompt: basicPrompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const endTime = Date.now();
+                    const duration = Math.round((endTime - startTime) / 1000);
+
+                    this.enhancedPrompt.value = data.enhancedPrompt;
+
+                    // Show timing
+                    this.enhancedTiming.textContent = `Enhanced in ${duration}s`;
+                    this.enhancedTiming.style.display = 'block';
+
+                } catch (error) {
+                    console.error('Enhance Error:', error);
+                    alert(`Error enhancing prompt: ${error.message}`);
+                } finally {
+                    this.enhanceBtn.disabled = false;
+                    this.enhanceBtn.textContent = 'Enhance Prompt';
+                }
+            }
+
+            async generateImages() {
+                const prompt = this.enhancedPrompt.value.trim() || this.promptInput.value.trim();
+
+                if (!prompt) {
+                    alert('Please enter a prompt first!');
+                    return;
+                }
+
+                this.generateBtn.disabled = true;
+                this.generateBtn.textContent = 'Generating...';
+
+                // Show loading states
+                this.showLoading(this.geminiResult);
+                this.showLoading(this.gemini4Result);
+                this.showLoading(this.gemini4UltraResult);
+
+                // Generate images concurrently
+                const promises = [
+                    this.generateGemini(prompt),
+                    this.generateGemini4(prompt),
+                    this.generateGemini4Ultra(prompt)
+                ];
+
+                try {
+                    await Promise.allSettled(promises);
+                } finally {
+                    this.generateBtn.disabled = false;
+                    this.generateBtn.textContent = 'Generate Post';
+
+                    // Generate caption and tags
+                    this.generateCaption(prompt);
+                }
+            }
+
+            showLoading(element) {
+                element.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            }
+
+            showError(element, message) {
+                element.innerHTML = `<div class="error">${message}</div>`;
+            }
+
+            showImage(element, imageUrl, timing) {
+                const timingText = timing ? `Generated in ${timing}` : '';
+                // Get the parent card to add timing info outside the image container
+                const parentCard = element.parentElement;
+
+                // Update the image container
+                element.innerHTML = `<img src="${imageUrl}" alt="Generated image" style="width: 100%; height: 100%; object-fit: cover;">`;
+
+                // Remove any existing timing info
+                const existingTiming = parentCard.querySelector('.timing-info');
+                if (existingTiming) {
+                    existingTiming.remove();
+                }
+
+                // Add timing info below the image container if timing exists
+                if (timingText) {
+                    const timingDiv = document.createElement('div');
+                    timingDiv.className = 'timing-info';
+                    timingDiv.textContent = timingText;
+                    parentCard.appendChild(timingDiv);
+                }
+            }
+
+
+
+            async generateGemini(prompt) {
+                const startTime = Date.now();
+                try {
+                    const response = await fetch('/api/imagen3', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const endTime = Date.now();
+                    const duration = ((endTime - startTime) / 1000).toFixed(1);
+
+                    if (data.base64) {
+                        // Gemini returns base64 encoded image
+                        const imageUrl = `data:image/png;base64,${data.base64}`;
+                        this.showImage(this.geminiResult, imageUrl, `${duration}s`);
+                    } else {
+                        throw new Error('No image data in response');
+                    }
+
+                } catch (error) {
+                    console.error('Gemini Error:', error);
+                    this.showError(this.geminiResult, `Error: ${error.message}`);
+                }
+            }
+
+            async generateGemini4(prompt) {
+                const startTime = Date.now();
+                try {
+                    const response = await fetch('/api/imagen4', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const endTime = Date.now();
+                    const duration = ((endTime - startTime) / 1000).toFixed(1);
+
+                    if (data.base64) {
+                        // Gemini returns base64 encoded image
+                        const imageUrl = `data:image/png;base64,${data.base64}`;
+                        this.showImage(this.gemini4Result, imageUrl, `${duration}s`);
+                    } else {
+                        throw new Error('No image data in response');
+                    }
+
+                } catch (error) {
+                    console.error('Gemini 4 Error:', error);
+                    this.showError(this.gemini4Result, `Error: ${error.message}`);
+                }
+            }
+
+            async generateGemini4Ultra(prompt) {
+                const startTime = Date.now();
+                try {
+                    const response = await fetch('/api/imagen4ultra', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const endTime = Date.now();
+                    const duration = ((endTime - startTime) / 1000).toFixed(1);
+
+                    if (data.base64) {
+                        // Gemini returns base64 encoded image
+                        const imageUrl = `data:image/png;base64,${data.base64}`;
+                        this.showImage(this.gemini4UltraResult, imageUrl, `${duration}s`);
+                    } else {
+                        throw new Error('No image data in response');
+                    }
+
+                } catch (error) {
+                    console.error('Gemini 4 Error:', error);
+                    this.showError(this.gemini4UltraResult, `Error: ${error.message}`);
+                }
+            }
+
+            initImageSelection() {
+                const cards = document.querySelectorAll('.result-card');
+                cards.forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        // Don't trigger selection if clicking on expand icon
+                        if (e.target.closest('.expand-icon')) {
+                            this.expandImage(card);
+                            return;
+                        }
+
+                        // Toggle selection
+                        if (card.classList.contains('selected')) {
+                            card.classList.remove('selected');
+                            this.selectedCard = null;
+                        } else {
+                            // Remove selection from all cards
+                            cards.forEach(c => c.classList.remove('selected'));
+                            // Add selection to clicked card
+                            card.classList.add('selected');
+                            this.selectedCard = card.dataset.model;
+                        }
+
+                        // Update post button state
+                        this.updatePostButtonState();
+                    });
+                });
+            }
+
+            expandImage(card) {
+                const imageElement = card.querySelector('img');
+                if (!imageElement) return;
+
+                // Create modal overlay
+                const modal = document.createElement('div');
+                modal.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.9);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    cursor: pointer;
+                `;
+
+                // Create enlarged image
+                const enlargedImg = document.createElement('img');
+                enlargedImg.src = imageElement.src;
+                enlargedImg.style.cssText = `
+                    max-width: 90%;
+                    max-height: 90%;
+                    border-radius: 10px;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+                `;
+
+                modal.appendChild(enlargedImg);
+                document.body.appendChild(modal);
+
+                // Close modal on click
+                modal.addEventListener('click', () => {
+                    document.body.removeChild(modal);
+                });
+            }
+
+            async generateCaption(prompt) {
+                const startTime = Date.now();
+
+                try {
+                    const response = await fetch('/api/generate-caption', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const endTime = Date.now();
+                    const duration = Math.round((endTime - startTime) / 1000);
+
+                    // Combine caption and hashtags with line break
+                    const postText = `${data.caption}\n\n${data.tags}`;
+                    this.postContent.value = postText;
+
+                    // Show timing
+                    this.captionTiming.textContent = `Generated in ${duration}s`;
+                    this.captionTiming.style.display = 'block';
+
+                } catch (error) {
+                    console.error('Caption Generation Error:', error);
+                    // Still show fallback content
+                    const fallbackPost = `Transform your precious memories into beautiful keepsakes! ✨ Create lasting treasures that tell your unique story.`;
+                    this.postContent.value = fallbackPost;
+
+                    this.captionTiming.textContent = 'Error generating content';
+                    this.captionTiming.style.display = 'block';
+                }
+            }
+
+            updatePostButtonState() {
+                // Enable post button only if an image is selected
+                this.postBtn.disabled = !this.selectedCard;
+            }
+
+            async postToInstagram() {
+                if (!this.selectedCard) {
+                    alert('Please select an image first!');
+                    return;
+                }
+
+                const caption = this.postContent.value.trim();
+                if (!caption) {
+                    alert('Please add a caption for your post!');
+                    return;
+                }
+
+                // Get the selected image
+                const selectedCardElement = document.querySelector(`[data-model="${this.selectedCard}"]`);
+                const imageElement = selectedCardElement.querySelector('img');
+
+                if (!imageElement) {
+                    alert('No image found for the selected model!');
+                    return;
+                }
+
+                this.postBtn.disabled = true;
+                this.postBtn.textContent = 'Posting...';
+
+                try {
+                    // Convert image to blob for upload
+                    const imageBlob = await this.getImageBlob(imageElement.src);
+
+                    const formData = new FormData();
+                    formData.append('image', imageBlob, 'post-image.png');
+                    formData.append('caption', caption);
+                    formData.append('model', this.selectedCard);
+
+                    const response = await fetch('/api/instagram/post', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    alert(`Successfully posted to Instagram! Post ID: ${data.postId}`);
+
+                } catch (error) {
+                    console.error('Instagram Post Error:', error);
+                    alert(`Error posting to Instagram: ${error.message}`);
+                } finally {
+                    this.postBtn.disabled = false;
+                    this.postBtn.textContent = 'Post to Instagram';
+                }
+            }
+
+            async getImageBlob(imageSrc) {
+                if (imageSrc.startsWith('data:')) {
+                    // Convert base64 to blob
+                    const response = await fetch(imageSrc);
+                    return await response.blob();
+                } else {
+                    // Fetch image from URL
+                    const response = await fetch(imageSrc);
+                    return await response.blob();
+                }
+            }
+
+            async openSettingsModal() {
+                try {
+                    // Fetch current prompts from server
+                    const response = await fetch('/api/system-prompts');
+                    const prompts = await response.json();
+
+                    this.showSettingsModal(prompts);
+                } catch (error) {
+                    console.error('Error fetching system prompts:', error);
+                    alert('Error loading system prompts');
+                }
+            }
+
+            showSettingsModal(prompts) {
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.innerHTML = `
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h2 class="modal-title">System Prompts Configuration</h2>
+                            <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">×</button>
+                        </div>
+                        <div class="modal-content">
+                            <div class="prompt-section">
+                                <label class="prompt-label">Prompt Enhancement System Prompt:</label>
+                                <textarea class="prompt-textarea" id="enhancePrompt">${prompts.enhancePrompt || ''}</textarea>
+                            </div>
+                            <div class="prompt-section">
+                                <label class="prompt-label">Caption Generation System Prompt:</label>
+                                <textarea class="prompt-textarea" id="captionPrompt">${prompts.captionPrompt || ''}</textarea>
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="cancel-btn" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+                            <button class="save-btn" onclick="window.imageGenerator.saveSystemPrompts()">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                // Close modal when clicking outside
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.remove();
+                    }
+                });
+            }
+
+            async saveSystemPrompts() {
+                const enhancePrompt = document.getElementById('enhancePrompt').value;
+                const captionPrompt = document.getElementById('captionPrompt').value;
+
+                try {
+                    const response = await fetch('/api/system-prompts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            enhancePrompt,
+                            captionPrompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to save prompts');
+                    }
+
+                    alert('System prompts saved successfully!');
+                    document.querySelector('.modal-overlay').remove();
+
+                } catch (error) {
+                    console.error('Error saving system prompts:', error);
+                    alert('Error saving system prompts');
+                }
+            }
+        }
+
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.imageGenerator = new ImageGenerator();
+        });
+    </script>
+</body>
+
+</html>
