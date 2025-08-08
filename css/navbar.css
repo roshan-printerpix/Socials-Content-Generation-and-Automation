@@ -1,0 +1,55 @@
+/* Floating Navbar Styles */
+.floating-navbar {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 1200px;
+    max-width: calc(100vw - 40px);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.navbar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 25px;
+}
+
+.navbar-brand h2 {
+    color: #e90b75;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.navbar-nav {
+    display: flex;
+    gap: 20px;
+}
+
+.nav-link {
+    color: #6b7280;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #e90b75;
+    background: rgba(233, 11, 117, 0.1);
+}
+
+.nav-link.active {
+    color: white;
+    background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
+    box-shadow: 0 4px 15px rgba(233, 11, 117, 0.3);
+}

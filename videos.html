@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Printerpix Studio - Images</title>
+    <title>Printerpix Studio - Videos</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/navbar.css">
     <link rel="stylesheet" href="css/settings.css">
@@ -23,32 +23,32 @@
                 <h2>Printerpix Studio</h2>
             </div>
             <div class="navbar-nav">
-                <a href="/" class="nav-link active">Images</a>
-                <a href="/videos.html" class="nav-link">Videos</a>
+                <a href="/" class="nav-link">Images</a>
+                <a href="/videos.html" class="nav-link active">Videos</a>
             </div>
         </div>
     </nav>
 
     <div class="container">
         <div class="input-section">
-            <textarea id="promptInput" class="prompt-input"
-                placeholder="Enter your basic prompt here... (e.g., 'Family enjoying photobook in living room, UK')"></textarea>
+            <textarea id="videoPromptInput" class="prompt-input"
+                placeholder="Enter your basic video prompt here... (e.g., 'Family watching home videos together in living room, UK')"></textarea>
             <div style="margin-bottom: 15px;">
-                <button id="enhanceBtn" class="enhance-btn" disabled>Enhance Prompt</button>
+                <button id="videoEnhanceBtn" class="enhance-btn" disabled>Enhance Prompt</button>
             </div>
             <div class="enhanced-prompt-container">
-                <textarea id="enhancedPrompt" class="enhanced-prompt"
-                    placeholder="Enhanced prompt will appear here... You can edit it before generating posts."></textarea>
-                <div id="enhancedTiming" class="timing-info" style="display: none;"></div>
+                <textarea id="videoEnhancedPrompt" class="enhanced-prompt"
+                    placeholder="Enhanced video prompt will appear here... You can edit it before generating videos."></textarea>
+                <div id="videoEnhancedTiming" class="timing-info" style="display: none;"></div>
             </div>
             <div style="margin-top: 15px;">
-                <button id="generateBtn" class="generate-btn" disabled>Generate Post</button>
+                <button id="videoGenerateBtn" class="generate-btn" disabled>Generate Videos</button>
             </div>
         </div>
 
         <div class="results-section">
-            <div class="results-grid">
-                <div class="result-card" data-model="imagen3">
+            <div class="results-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="result-card" data-model="runway">
                     <div class="result-header gemini">
                         <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="15,3 21,3 21,9"></polyline>
@@ -56,12 +56,12 @@
                             <line x1="21" y1="3" x2="14" y2="10"></line>
                             <line x1="3" y1="21" x2="10" y2="14"></line>
                         </svg>
-                        Gemini Imagen 3
+                        Runway ML
                     </div>
-                    <div id="geminiResult" class="result-image">Enter a prompt to generate</div>
+                    <div id="runwayResult" class="result-image">Enter a prompt to generate</div>
                 </div>
 
-                <div class="result-card" data-model="imagen4">
+                <div class="result-card" data-model="veo">
                     <div class="result-header gemini">
                         <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="15,3 21,3 21,9"></polyline>
@@ -69,40 +69,27 @@
                             <line x1="21" y1="3" x2="14" y2="10"></line>
                             <line x1="3" y1="21" x2="10" y2="14"></line>
                         </svg>
-                        Gemini Imagen 4
+                        Google Veo 3
                     </div>
-                    <div id="gemini4Result" class="result-image">Enter a prompt to generate</div>
-                </div>
-
-                <div class="result-card" data-model="imagen4ultra">
-                    <div class="result-header gemini">
-                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15,3 21,3 21,9"></polyline>
-                            <polyline points="9,21 3,21 3,15"></polyline>
-                            <line x1="21" y1="3" x2="14" y2="10"></line>
-                            <line x1="3" y1="21" x2="10" y2="14"></line>
-                        </svg>
-                        Gemini Imagen 4 Ultra
-                    </div>
-                    <div id="gemini4UltraResult" class="result-image">Enter a prompt to generate</div>
+                    <div id="veoResult" class="result-image">Enter a prompt to generate</div>
                 </div>
             </div>
 
-            <div class="caption-section" id="captionSection">
+            <div class="caption-section" id="videoCaptionSection">
                 <div class="input-section">
                     <div class="caption-container">
-                        <textarea id="postContent" class="post-content-input"
+                        <textarea id="videoPostContent" class="post-content-input"
                             placeholder="Your Instagram post content will appear here..."></textarea>
-                        <div id="captionTiming" class="timing-info" style="display: none;"></div>
+                        <div id="videoCaptionTiming" class="timing-info" style="display: none;"></div>
                     </div>
                     <div style="margin-top: 15px;">
-                        <button id="postBtn" class="generate-btn" disabled>Post to Instagram</button>
+                        <button id="videoPostBtn" class="generate-btn" disabled>Post to Instagram</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="js/images.js"></script>
+    <script src="js/videos.js"></script>
 </body>
 </html>
