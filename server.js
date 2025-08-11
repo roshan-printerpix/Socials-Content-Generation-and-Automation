@@ -252,23 +252,23 @@ app.post('/api/system-prompts', async (req, res) => {
     try {
         const { enhancePrompt, captionPrompt } = req.body;
         const updates = [];
-        
+
         if (enhancePrompt !== undefined) {
             await promptManager.savePrompt('enhancePrompt', enhancePrompt);
             systemPrompts.enhancePrompt = enhancePrompt;
             updates.push('Enhance Prompt');
         }
-        
+
         if (captionPrompt !== undefined) {
             await promptManager.savePrompt('captionPrompt', captionPrompt);
             systemPrompts.captionPrompt = captionPrompt;
             updates.push('Caption Prompt');
         }
-        
-        const message = updates.length > 0 
+
+        const message = updates.length > 0
             ? `System prompts updated: ${updates.join(', ')}. Changes committed to Git.`
             : 'No changes made to system prompts';
-            
+
         console.log('✅', message);
         res.json({ success: true, message: 'System prompts updated successfully', updatedPrompts: updates });
     } catch (error) {
@@ -409,25 +409,25 @@ app.post('/api/veo/video', async (req, res) => {
             });
         } catch (apiError) {
             console.error('Veo API Error:', apiError);
-            
+
             // Check for quota/rate limit errors
             if (apiError.message && (
-                apiError.message.includes('quota') || 
+                apiError.message.includes('quota') ||
                 apiError.message.includes('RESOURCE_EXHAUSTED') ||
                 apiError.message.includes('429')
             )) {
                 throw new Error(`🚫 Veo 3 quota exceeded. Your implementation is working correctly! Please visit https://aistudio.google.com/ to check your quota limits and billing settings. You may need to wait for quota reset or upgrade your plan.`);
             }
-            
+
             throw new Error(`Veo 3 API call failed: ${apiError.message}. This might indicate that Veo 3 is not available with your current API key or the model name is incorrect.`);
         }
 
         console.log('Initial operation:', JSON.stringify(operation, null, 2));
-        
+
         if (!operation) {
             throw new Error('No operation returned from generateVideos');
         }
-        
+
         if (!operation.name) {
             throw new Error(`Operation missing name property. Operation structure: ${JSON.stringify(operation, null, 2)}`);
         }
@@ -437,7 +437,7 @@ app.post('/api/veo/video', async (req, res) => {
         for (let i = 0; i < MAX_POLLS && !operation.done; i++) {
             await new Promise(r => setTimeout(r, 10_000));
             console.log(`Polling attempt ${i + 1}, operation name: ${operation.name}`);
-            
+
             try {
                 operation = await googleAI.operations.get({ name: operation.name });
                 console.log(`Poll ${i + 1} result:`, JSON.stringify(operation, null, 2));
@@ -445,7 +445,7 @@ app.post('/api/veo/video', async (req, res) => {
                 console.error(`Error during poll ${i + 1}:`, pollError);
                 throw new Error(`Polling error: ${pollError.message}`);
             }
-            
+
             if (operation.error) {
                 throw new Error(`Veo operation error: ${operation.error.message || JSON.stringify(operation.error)}`);
             }
