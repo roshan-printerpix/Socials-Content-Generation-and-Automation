@@ -14,6 +14,7 @@ const PORT = 3000;
 // --- External services
 const cloudinary = require('cloudinary').v2;
 const axios = require('axios');
+const promptManager = require('./utils/promptManager');
 
 // --- OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -222,74 +223,57 @@ app.post('/api/generate-caption', async (req, res) => {
     }
 });
 
-// ===================== System Prompts (in-memory) =====================
+// ===================== System Prompts (file-based with auto-commit) =====================
 
-let systemPrompts = {
-    enhancePrompt: `You are a social-media content strategist for Printerpix, transforming cherished memories into bespoke photobooks, framed prints, wall canvases, mugs and blankets. When the user provides a one-sentence Scenario, answer with one and only one JSON object that guides an AI image generator. The object should be created to make sure the image is perfect for marketing purpose on social media platforms for Printerpix. It should decide tone, colours, aesthetics according to country mentioned. To appeal to target audience in that country. The image should be focused on the marketing product. Aim is to generate prompt for a highly engaging image on social media.
+let systemPrompts = {};
 
-REQUIRED JSON KEYS:
-"scene" - A vivid 100-150-word description that: • names the setting and season inside a typical home of mentioned country (think cosy Victorian terrace, modern London flat, or Cotswolds cottage) • introduces each person with clear ages and relationships so family roles are never confused • shows one Printerpix product in natural use (never print any logo or text on the product) • paints lighting, colours, décor and small details inspired by current country interiors: warm neutrals, sage green, blush, terracotta, coastal blues • weaves a marketing-ready emotional hook that invites followers to picture their own memories on display • reads like lifestyle copy, free of camera jargon or AI prompt tokens
+// Load prompts on startup
+(async () => {
+    try {
+        systemPrompts = await promptManager.loadPrompts();
+        console.log('✅ System prompts loaded from files');
+    } catch (error) {
+        console.error('❌ Failed to load system prompts:', error.message);
+    }
+})();
 
-"shot_type" - "wide shot", "medium shot" or "close up"
-
-"composition" - Two-to-five words of framing advice (rule of thirds, airy negative space, gentle depth, leading lines)
-
-"colour_palette" - Three-to-four descriptive colour words that echo UK décor trends for 2025 (example: warm oat, sage, blush)
-
-"aspect_ratio" - "1:1" for Instagram or "4:5" for other
-
-STYLE PRINCIPLES:
-• Mood radiates nostalgia, joy, love and family bonding.
-• Light is always natural: golden hour glow, sunlit bay window, soft candlelight.
-• Décor feels authentically British – think herringbone floors, vintage Roberts radio, trailing ivy or biophilic touches.
-• Keep the scene focused and uncluttered; every prop supports the story.
-• Output nothing outside the JSON object.
-
-QUALITY CHECKLIST (internal):
-1 Family roles match the Scenario.
-2 No "Printerpix" text printed on the product.
-3 Colours and styling align with specified country trends
-4 Scene length is between 100 and 160 words.
-5 colours and styling should be selected to be Aesthetically pleasing to the eyes
-6 image should have context/relatability to mentioned country`,
-
-    captionPrompt: `You are a social media expert for Printerpix, a company that creates personalized photo products like photobooks, framed prints, wall canvases, mugs, and blankets.
-
-Based on the image generation prompt: "{prompt}"
-
-Generate an engaging Instagram post with:
-
-1. A compelling caption (2-3 sentences) that:
-   - Connects emotionally with families and memory-making
-   - Subtly promotes Printerpix products without being salesy
-   - Uses warm, relatable language
-   - Includes a call-to-action
-
-2. Relevant hashtags (exactly 5-10 hashtags) that include:
-   - Printerpix branded hashtags (#printerpix)
-   - Memory and family-related hashtags
-   - Product-specific hashtags
-   - Trending lifestyle hashtags
-
-IMPORTANT: Use exactly between 5 and 10 hashtags, no more, no less.
-
-Format your response as JSON with "caption" and "tags" fields.`
-};
-
-app.get('/api/system-prompts', (req, res) => {
-    res.json(systemPrompts);
+app.get('/api/system-prompts', async (req, res) => {
+    try {
+        // Always load fresh from files to ensure consistency
+        const prompts = await promptManager.loadPrompts();
+        res.json(prompts);
+    } catch (error) {
+        console.error('Error loading system prompts:', error);
+        res.status(500).json({ error: 'Failed to load system prompts' });
+    }
 });
 
-app.post('/api/system-prompts', (req, res) => {
+app.post('/api/system-prompts', async (req, res) => {
     try {
         const { enhancePrompt, captionPrompt } = req.body;
-        if (enhancePrompt !== undefined) systemPrompts.enhancePrompt = enhancePrompt;
-        if (captionPrompt !== undefined) systemPrompts.captionPrompt = captionPrompt;
-        console.log('System prompts updated');
-        res.json({ success: true, message: 'System prompts updated successfully' });
+        const updates = [];
+        
+        if (enhancePrompt !== undefined) {
+            await promptManager.savePrompt('enhancePrompt', enhancePrompt);
+            systemPrompts.enhancePrompt = enhancePrompt;
+            updates.push('Enhance Prompt');
+        }
+        
+        if (captionPrompt !== undefined) {
+            await promptManager.savePrompt('captionPrompt', captionPrompt);
+            systemPrompts.captionPrompt = captionPrompt;
+            updates.push('Caption Prompt');
+        }
+        
+        const message = updates.length > 0 
+            ? `System prompts updated: ${updates.join(', ')}. Changes committed to Git.`
+            : 'No changes made to system prompts';
+            
+        console.log('✅', message);
+        res.json({ success: true, message, updatedPrompts: updates });
     } catch (error) {
         console.error('Error updating system prompts:', error);
-        res.status(500).json({ error: 'Failed to update system prompts' });
+        res.status(500).json({ error: 'Failed to update system prompts: ' + error.message });
     }
 });
 
@@ -414,18 +398,38 @@ app.post('/api/veo/video', async (req, res) => {
         console.log(`Generating Veo 3 video for prompt: ${prompt}`);
 
         // Start the job (returns an operation object)
-        let operation = await googleAI.models.generateVideos({
-            model: 'veo-3.0-generate-preview',
-            prompt,
-            // optional:
-            // config: { negative_prompt: 'low quality, cartoon' },
-            // image: <image object from Imagen if doing image-to-video>
-        });
+        let operation;
+        try {
+            operation = await googleAI.models.generateVideos({
+                model: 'veo-3.0-generate-preview',
+                prompt,
+                // optional:
+                // config: { negative_prompt: 'low quality, cartoon' },
+                // image: <image object from Imagen if doing image-to-video>
+            });
+        } catch (apiError) {
+            console.error('Veo API Error:', apiError);
+            
+            // Check for quota/rate limit errors
+            if (apiError.message && (
+                apiError.message.includes('quota') || 
+                apiError.message.includes('RESOURCE_EXHAUSTED') ||
+                apiError.message.includes('429')
+            )) {
+                throw new Error(`🚫 Veo 3 quota exceeded. Your implementation is working correctly! Please visit https://aistudio.google.com/ to check your quota limits and billing settings. You may need to wait for quota reset or upgrade your plan.`);
+            }
+            
+            throw new Error(`Veo 3 API call failed: ${apiError.message}. This might indicate that Veo 3 is not available with your current API key or the model name is incorrect.`);
+        }
 
         console.log('Initial operation:', JSON.stringify(operation, null, 2));
         
-        if (!operation || !operation.name) {
-            throw new Error('Invalid operation returned from generateVideos');
+        if (!operation) {
+            throw new Error('No operation returned from generateVideos');
+        }
+        
+        if (!operation.name) {
+            throw new Error(`Operation missing name property. Operation structure: ${JSON.stringify(operation, null, 2)}`);
         }
 
         // Poll exactly as the docs show: pass the operation name to get()
