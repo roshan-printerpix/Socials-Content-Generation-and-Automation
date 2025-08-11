@@ -270,7 +270,7 @@ app.post('/api/system-prompts', async (req, res) => {
             : 'No changes made to system prompts';
             
         console.log('✅', message);
-        res.json({ success: true, message, updatedPrompts: updates });
+        res.json({ success: true, message: 'System prompts updated successfully', updatedPrompts: updates });
     } catch (error) {
         console.error('Error updating system prompts:', error);
         res.status(500).json({ error: 'Failed to update system prompts: ' + error.message });

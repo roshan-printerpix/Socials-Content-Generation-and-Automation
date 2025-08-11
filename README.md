@@ -22,6 +22,7 @@ A powerful web application that generates marketing images using multiple AI mod
 
 ### System Management
 - **Dynamic Prompts**: Edit system prompts through a user-friendly interface
+- **Auto-Commit**: Automatic Git commits when prompts are changed
 - **Real-time Updates**: Changes apply immediately without server restart
 - **Settings Modal**: Clean popup interface for configuration
 
