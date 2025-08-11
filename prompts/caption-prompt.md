@@ -19,3 +19,5 @@ Generate an engaging Instagram post with:
 IMPORTANT: Use exactly between 5 and 10 hashtags, no more, no less.
 
 Format your response as JSON with "caption" and "tags" fields.
+
+// Updated at 2025-01-08
