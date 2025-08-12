@@ -9,8 +9,10 @@ class PromptManager {
     constructor() {
         this.promptsDir = path.join(__dirname, '..', 'prompts');
         this.promptFiles = {
-            enhancePrompt: 'enhance-prompt.md',
-            captionPrompt: 'caption-prompt.md'
+            imageEnhancePrompt: 'image-enhance-prompt.md',
+            imageCaptionPrompt: 'image-caption-prompt.md',
+            videoEnhancePrompt: 'video-enhance-prompt.md',
+            videoCaptionPrompt: 'video-caption-prompt.md'
         };
     }
 
@@ -73,8 +75,8 @@ class PromptManager {
             console.log(`🚀 Auto-committed: ${commitMessage}`);
             
             // Optional: Push to remote (uncomment if you want auto-push)
-            // await execAsync('git push origin main');
-            // console.log('📤 Pushed to remote repository');
+            await execAsync('git push origin main');
+            console.log('📤 Pushed to remote repository');
             
         } catch (error) {
             console.error('Git commit error:', error.message);
@@ -84,8 +86,10 @@ class PromptManager {
 
     getPromptDisplayName(promptType) {
         const names = {
-            enhancePrompt: 'Enhance Prompt',
-            captionPrompt: 'Caption Prompt'
+            imageEnhancePrompt: 'Image Prompt Generation',
+            imageCaptionPrompt: 'Image Caption Generation',
+            videoEnhancePrompt: 'Video Prompt Generation',
+            videoCaptionPrompt: 'Video Caption Generation'
         };
         return names[promptType] || promptType;
     }

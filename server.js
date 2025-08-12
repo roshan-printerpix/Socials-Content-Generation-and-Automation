@@ -152,7 +152,7 @@ app.post('/api/enhance-prompt', async (req, res) => {
 
         console.log(`Enhancing prompt: ${prompt}`);
 
-        const systemPrompt = systemPrompts.enhancePrompt;
+        const systemPrompt = systemPrompts.imageEnhancePrompt;
 
         // NOTE: if you don't actually have access to a "gpt-5-*" model, use gpt-4o instead.
         const response = await openai.chat.completions.create({
@@ -183,7 +183,7 @@ app.post('/api/generate-caption', async (req, res) => {
 
         console.log(`Generating caption for prompt: ${prompt}`);
 
-        const captionPrompt = systemPrompts.captionPrompt.replace('{prompt}', prompt);
+        const captionPrompt = systemPrompts.imageCaptionPrompt.replace('{prompt}', prompt);
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4o',
@@ -250,19 +250,31 @@ app.get('/api/system-prompts', async (req, res) => {
 
 app.post('/api/system-prompts', async (req, res) => {
     try {
-        const { enhancePrompt, captionPrompt } = req.body;
+        const { imageEnhancePrompt, imageCaptionPrompt, videoEnhancePrompt, videoCaptionPrompt } = req.body;
         const updates = [];
 
-        if (enhancePrompt !== undefined) {
-            await promptManager.savePrompt('enhancePrompt', enhancePrompt);
-            systemPrompts.enhancePrompt = enhancePrompt;
-            updates.push('Enhance Prompt');
+        if (imageEnhancePrompt !== undefined) {
+            await promptManager.savePrompt('imageEnhancePrompt', imageEnhancePrompt);
+            systemPrompts.imageEnhancePrompt = imageEnhancePrompt;
+            updates.push('Image Prompt Generation');
         }
 
-        if (captionPrompt !== undefined) {
-            await promptManager.savePrompt('captionPrompt', captionPrompt);
-            systemPrompts.captionPrompt = captionPrompt;
-            updates.push('Caption Prompt');
+        if (imageCaptionPrompt !== undefined) {
+            await promptManager.savePrompt('imageCaptionPrompt', imageCaptionPrompt);
+            systemPrompts.imageCaptionPrompt = imageCaptionPrompt;
+            updates.push('Image Caption Generation');
+        }
+
+        if (videoEnhancePrompt !== undefined) {
+            await promptManager.savePrompt('videoEnhancePrompt', videoEnhancePrompt);
+            systemPrompts.videoEnhancePrompt = videoEnhancePrompt;
+            updates.push('Video Prompt Generation');
+        }
+
+        if (videoCaptionPrompt !== undefined) {
+            await promptManager.savePrompt('videoCaptionPrompt', videoCaptionPrompt);
+            systemPrompts.videoCaptionPrompt = videoCaptionPrompt;
+            updates.push('Video Caption Generation');
         }
 
         const message = updates.length > 0
@@ -338,19 +350,7 @@ app.post('/api/enhance-video-prompt', async (req, res) => {
 
         console.log(`Enhancing video prompt: ${prompt}`);
 
-        const videoSystemPrompt = `You are a video content strategist for Printerpix, creating engaging video content for social media marketing. Transform the basic video prompt into a detailed, cinematic description optimized for AI video generation.
-
-Create a vivid video description that:
-• Sets the scene in a typical home environment with authentic details
-• Describes camera movements and transitions naturally
-• Shows Printerpix products being used organically in the scene
-• Captures emotional moments and family interactions
-• Uses warm, inviting lighting and colors
-• Focuses on storytelling that resonates with families
-• Keeps the description between 100-150 words
-• Avoids technical video jargon
-
-Make it feel like a heartwarming commercial that showcases the joy of preserving memories with Printerpix products.`;
+        const videoSystemPrompt = systemPrompts.videoEnhancePrompt;
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4o',
@@ -524,26 +524,7 @@ app.post('/api/generate-video-caption', async (req, res) => {
 
         console.log(`Generating video caption for prompt: ${prompt}`);
 
-        const videoCaptionPrompt = `You are a social media expert for Printerpix, creating engaging Instagram captions for video content.
-
-Based on the video prompt: "${prompt}"
-
-Generate an engaging Instagram post with:
-
-1. A compelling caption (2-3 sentences) that:
-   - Connects emotionally with families and memory-making
-   - Highlights the video content and storytelling
-   - Subtly promotes Printerpix products
-   - Uses warm, relatable language
-   - Includes a call-to-action
-
-2. Relevant hashtags (exactly 5-10 hashtags) that include:
-   - Printerpix branded hashtags (#printerpix)
-   - Video and storytelling hashtags
-   - Memory and family-related hashtags
-   - Product-specific hashtags
-
-Format your response as JSON with "caption" and "tags" fields.`;
+        const videoCaptionPrompt = systemPrompts.videoCaptionPrompt.replace('{prompt}', prompt);
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4o',

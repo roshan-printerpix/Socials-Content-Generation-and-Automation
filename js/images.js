@@ -477,12 +477,20 @@ class ImageGenerator {
                 </div>
                 <div class="modal-content">
                     <div class="prompt-section">
-                        <label class="prompt-label">Prompt Enhancement System Prompt:</label>
-                        <textarea class="prompt-textarea" id="enhancePrompt">${prompts.enhancePrompt || ''}</textarea>
+                        <label class="prompt-label">Image Prompt Generation:</label>
+                        <textarea class="prompt-textarea" id="imageEnhancePrompt">${prompts.imageEnhancePrompt || ''}</textarea>
                     </div>
                     <div class="prompt-section">
-                        <label class="prompt-label">Caption Generation System Prompt:</label>
-                        <textarea class="prompt-textarea" id="captionPrompt">${prompts.captionPrompt || ''}</textarea>
+                        <label class="prompt-label">Image Caption Generation:</label>
+                        <textarea class="prompt-textarea" id="imageCaptionPrompt">${prompts.imageCaptionPrompt || ''}</textarea>
+                    </div>
+                    <div class="prompt-section">
+                        <label class="prompt-label">Video Prompt Generation:</label>
+                        <textarea class="prompt-textarea" id="videoEnhancePrompt">${prompts.videoEnhancePrompt || ''}</textarea>
+                    </div>
+                    <div class="prompt-section">
+                        <label class="prompt-label">Video Caption Generation:</label>
+                        <textarea class="prompt-textarea" id="videoCaptionPrompt">${prompts.videoCaptionPrompt || ''}</textarea>
                     </div>
                 </div>
                 <div class="modal-actions">
@@ -503,8 +511,10 @@ class ImageGenerator {
     }
 
     async saveSystemPrompts() {
-        const enhancePrompt = document.getElementById('enhancePrompt').value;
-        const captionPrompt = document.getElementById('captionPrompt').value;
+        const imageEnhancePrompt = document.getElementById('imageEnhancePrompt').value;
+        const imageCaptionPrompt = document.getElementById('imageCaptionPrompt').value;
+        const videoEnhancePrompt = document.getElementById('videoEnhancePrompt').value;
+        const videoCaptionPrompt = document.getElementById('videoCaptionPrompt').value;
 
         try {
             const response = await fetch('/api/system-prompts', {
@@ -513,8 +523,10 @@ class ImageGenerator {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    enhancePrompt,
-                    captionPrompt
+                    imageEnhancePrompt,
+                    imageCaptionPrompt,
+                    videoEnhancePrompt,
+                    videoCaptionPrompt
                 })
             });
 
