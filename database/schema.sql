@@ -4,12 +4,14 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Table for storing generated images
+-- Table for storing generated images (using storage buckets)
 CREATE TABLE generated_images (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     model VARCHAR(50) NOT NULL,
     prompt TEXT NOT NULL,
-    base64_image TEXT NOT NULL,
+    storage_path VARCHAR(500) NOT NULL,
+    public_url TEXT NOT NULL,
+    file_size INTEGER,
     generation_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     status VARCHAR(20) DEFAULT 'completed',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

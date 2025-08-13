@@ -15,7 +15,11 @@ const PORT = 3000;
 const cloudinary = require('cloudinary').v2;
 const axios = require('axios');
 const promptManager = require('./utils/promptManager');
-const { saveGeneratedImage, getGeneratedImages, saveInstagramPost } = require('./utils/supabase');
+const { saveGeneratedImage, getGeneratedImages, deleteGeneratedImage, saveInstagramPost } = require('./utils/supabase');
+
+// Debug Supabase connection
+console.log('🔍 Supabase URL:', process.env.SUPABASE_URL ? 'Set' : 'Not set');
+console.log('🔍 Supabase Key:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Not set');
 
 // --- OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -92,7 +96,17 @@ app.post('/api/imagen3', async (req, res) => {
             status: 'completed'
         };
 
-        await saveGeneratedImage(imageData);
+        console.log('🔍 Attempting to save image to database...');
+        try {
+            const savedData = await saveGeneratedImage(imageData);
+            if (savedData) {
+                console.log('✅ Image saved to database successfully:', savedData.id);
+            } else {
+                console.log('⚠️ Image not saved - Supabase may not be configured');
+            }
+        } catch (dbError) {
+            console.error('❌ Database save error:', dbError);
+        }
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -130,7 +144,17 @@ app.post('/api/imagen4', async (req, res) => {
             status: 'completed'
         };
 
-        await saveGeneratedImage(imageData);
+        console.log('🔍 Attempting to save Imagen 4 image to database...');
+        try {
+            const savedData = await saveGeneratedImage(imageData);
+            if (savedData) {
+                console.log('✅ Imagen 4 image saved to database successfully:', savedData.id);
+            } else {
+                console.log('⚠️ Imagen 4 image not saved - Supabase may not be configured');
+            }
+        } catch (dbError) {
+            console.error('❌ Imagen 4 database save error:', dbError);
+        }
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -168,7 +192,17 @@ app.post('/api/imagen4ultra', async (req, res) => {
             status: 'completed'
         };
 
-        await saveGeneratedImage(imageData);
+        console.log('🔍 Attempting to save Imagen 4 Ultra image to database...');
+        try {
+            const savedData = await saveGeneratedImage(imageData);
+            if (savedData) {
+                console.log('✅ Imagen 4 Ultra image saved to database successfully:', savedData.id);
+            } else {
+                console.log('⚠️ Imagen 4 Ultra image not saved - Supabase may not be configured');
+            }
+        } catch (dbError) {
+            console.error('❌ Imagen 4 Ultra database save error:', dbError);
+        }
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -674,6 +708,25 @@ app.get('/api/generated-images/stats', async (req, res) => {
     } catch (error) {
         console.error('Error fetching image stats:', error);
         res.status(500).json({ error: 'Failed to fetch image statistics' });
+    }
+});
+
+app.delete('/api/generated-images/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) return res.status(400).json({ error: 'Image ID is required' });
+
+        console.log(`Deleting image: ${id}`);
+        const success = await deleteGeneratedImage(id);
+        
+        if (success) {
+            res.json({ success: true, message: 'Image deleted successfully' });
+        } else {
+            res.status(404).json({ error: 'Image not found or could not be deleted' });
+        }
+    } catch (error) {
+        console.error('Error deleting image:', error);
+        res.status(500).json({ error: 'Failed to delete image' });
     }
 });
 

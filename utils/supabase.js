@@ -12,6 +12,15 @@ const supabase = supabaseUrl && supabaseKey
     ? createClient(supabaseUrl, supabaseKey)
     : null;
 
+// Test connection on startup
+if (supabase) {
+    console.log('✅ Supabase client created successfully');
+    console.log('🔗 Supabase URL:', supabaseUrl);
+    console.log('🔑 Supabase Key (first 20 chars):', supabaseKey.substring(0, 20) + '...');
+} else {
+    console.log('❌ Supabase client not created - missing credentials');
+}
+
 // Database helper functions
 const saveGeneratedImage = async (imageData) => {
     if (!supabase) {
@@ -19,22 +28,75 @@ const saveGeneratedImage = async (imageData) => {
         return null;
     }
 
+    console.log('🔍 Attempting to save image to storage and database:', {
+        model: imageData.model,
+        promptLength: imageData.prompt?.length,
+        hasBase64: !!imageData.base64_image
+    });
+
     try {
+        // Convert base64 to buffer
+        const base64Data = imageData.base64_image.replace(/^data:image\/\w+;base64,/, '');
+        const imageBuffer = Buffer.from(base64Data, 'base64');
+        
+        // Generate unique filename
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `${imageData.model}/${timestamp}-${Math.random().toString(36).substring(2, 15)}.png`;
+        
+        console.log('📁 Uploading to storage bucket:', filename);
+        
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('generated-images')
+            .upload(filename, imageBuffer, {
+                contentType: 'image/png',
+                cacheControl: '3600'
+            });
+
+        if (uploadError) {
+            console.error('❌ Storage upload error:', uploadError);
+            return null;
+        }
+
+        console.log('✅ Image uploaded to storage:', uploadData.path);
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+            .from('generated-images')
+            .getPublicUrl(filename);
+
+        const publicUrl = urlData.publicUrl;
+        console.log('🔗 Public URL:', publicUrl);
+
+        // Save metadata to database (without base64)
+        const dbData = {
+            model: imageData.model,
+            prompt: imageData.prompt,
+            storage_path: filename,
+            public_url: publicUrl,
+            file_size: imageBuffer.length,
+            generation_time: imageData.generation_time,
+            status: imageData.status || 'completed'
+        };
+
         const { data, error } = await supabase
             .from('generated_images')
-            .insert([imageData])
+            .insert([dbData])
             .select()
             .single();
 
         if (error) {
-            console.error('Error saving to database:', error);
+            console.error('❌ Database insert error:', error);
+            // Try to clean up uploaded file
+            await supabase.storage.from('generated-images').remove([filename]);
             return null;
         }
 
-        console.log('✅ Image saved to database:', data.id);
-        return data;
+        console.log('✅ Image metadata saved to database:', data.id);
+        return { ...data, publicUrl };
+
     } catch (err) {
-        console.error('Database save error:', err);
+        console.error('❌ Image save exception:', err);
         return null;
     }
 };
@@ -57,10 +119,58 @@ const getGeneratedImages = async (limit = 50) => {
             return [];
         }
 
+        console.log(`✅ Retrieved ${data?.length || 0} images from database`);
         return data || [];
     } catch (err) {
         console.error('Database fetch error:', err);
         return [];
+    }
+};
+
+const deleteGeneratedImage = async (imageId) => {
+    if (!supabase) {
+        console.warn('Supabase not configured');
+        return false;
+    }
+
+    try {
+        // First get the image data to find the storage path
+        const { data: imageData, error: fetchError } = await supabase
+            .from('generated_images')
+            .select('storage_path')
+            .eq('id', imageId)
+            .single();
+
+        if (fetchError || !imageData) {
+            console.error('Error fetching image for deletion:', fetchError);
+            return false;
+        }
+
+        // Delete from storage
+        const { error: storageError } = await supabase.storage
+            .from('generated-images')
+            .remove([imageData.storage_path]);
+
+        if (storageError) {
+            console.error('Error deleting from storage:', storageError);
+        }
+
+        // Delete from database
+        const { error: dbError } = await supabase
+            .from('generated_images')
+            .delete()
+            .eq('id', imageId);
+
+        if (dbError) {
+            console.error('Error deleting from database:', dbError);
+            return false;
+        }
+
+        console.log('✅ Image deleted successfully:', imageId);
+        return true;
+    } catch (err) {
+        console.error('Delete error:', err);
+        return false;
     }
 };
 
@@ -94,5 +204,6 @@ module.exports = {
     supabase,
     saveGeneratedImage,
     getGeneratedImages,
+    deleteGeneratedImage,
     saveInstagramPost
 };
