@@ -156,7 +156,7 @@ app.post('/api/enhance-prompt', async (req, res) => {
 
         // NOTE: if you don't actually have access to a "gpt-5-*" model, use gpt-4o instead.
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o',
+            model: 'gpt-5-2025-08-07',
             messages: [{ role: 'user', content: `${systemPrompt}\n\nUser scenario: ${prompt}` }],
             temperature: 1
         });
@@ -186,37 +186,25 @@ app.post('/api/generate-caption', async (req, res) => {
         const captionPrompt = systemPrompts.imageCaptionPrompt.replace('{prompt}', prompt);
 
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o',
+            model: 'gpt-5-2025-08-07',
             messages: [{ role: 'user', content: captionPrompt }],
-            temperature: 0.8
+            temperature: 1
         });
 
         const content = response.choices[0].message.content;
 
-        try {
-            const jsonResponse = JSON.parse(content);
-            res.json({ caption: jsonResponse.caption || '', tags: jsonResponse.tags || '' });
-        } catch {
-            // crude fallback
-            const lines = content.split('\n').filter(Boolean);
-            let caption = '';
-            let tags = '';
-            for (const line of lines) {
-                if (line.toLowerCase().includes('caption') && !caption) {
-                    caption = line.replace(/.*caption[:\-\s]*/i, '').trim();
-                } else if (line.includes('#') && !tags) {
-                    tags = line.trim();
-                }
-            }
-            res.json({
-                caption:
-                    caption ||
-                    'Transform your precious memories into beautiful keepsakes! ✨ Create lasting treasures that tell your unique story.',
-                tags:
-                    tags ||
-                    '#printerpix #memories #photobook #familymoments #personalized #keepsakes #memorymaking #photoprints'
-            });
-        }
+        // Parse the plain text response from the API
+        const lines = content.split('\n').filter(line => line.trim());
+
+        // Find caption (first non-hashtag line)
+        const captionLine = lines.find(line => !line.trim().startsWith('#'));
+        const caption = captionLine ? captionLine.trim() : '';
+
+        // Find hashtags (line that starts with #)
+        const tagsLine = lines.find(line => line.trim().startsWith('#'));
+        const tags = tagsLine ? tagsLine.trim() : '';
+
+        res.json({ caption, tags });
     } catch (error) {
         console.error('Caption Generation Error:', error);
         res.status(500).json({ error: error.message || 'Failed to generate caption' });

@@ -6,12 +6,13 @@ class VideoGenerator {
         this.videoEnhanceBtn = document.getElementById('videoEnhanceBtn');
         this.videoGenerateBtn = document.getElementById('videoGenerateBtn');
         this.runwayResult = document.getElementById('runwayResult');
+        this.soraResult = document.getElementById('soraResult');
         this.veoResult = document.getElementById('veoResult');
         this.videoPostContent = document.getElementById('videoPostContent');
         this.videoCaptionTiming = document.getElementById('videoCaptionTiming');
         this.videoEnhancedTiming = document.getElementById('videoEnhancedTiming');
         this.videoPostBtn = document.getElementById('videoPostBtn');
-        this.settingsBtn = document.getElementById('settingsBtn');
+        this.promptsBtn = document.getElementById('promptsBtn');
         this.selectedVideoCard = null;
 
         this.initVideoEventListeners();
@@ -21,7 +22,7 @@ class VideoGenerator {
         this.videoEnhanceBtn.addEventListener('click', () => this.enhanceVideoPrompt());
         this.videoGenerateBtn.addEventListener('click', () => this.generateVideos());
         this.videoPostBtn.addEventListener('click', () => this.postVideoToInstagram());
-        this.settingsBtn.addEventListener('click', () => this.openSettingsModal());
+        this.promptsBtn.addEventListener('click', () => this.openSettingsModal());
 
         // Enable/disable buttons based on input
         this.videoPromptInput.addEventListener('input', () => this.updateVideoButtonStates());
@@ -168,10 +169,12 @@ class VideoGenerator {
         this.videoGenerateBtn.textContent = 'Generating...';
 
         this.showVideoLoading(this.runwayResult);
+        this.showVideoLoading(this.soraResult);
         this.showVideoLoading(this.veoResult);
 
         const promises = [
             this.generateRunway(prompt),
+            this.generateSora(prompt),
             this.generateVeo(prompt)
         ];
 
@@ -270,6 +273,24 @@ class VideoGenerator {
         } catch (error) {
             console.error('Runway Error:', error);
             this.showVideoError(this.runwayResult, `Error: ${error.message}`);
+        }
+    }
+
+    async generateSora(prompt) {
+        const startTime = Date.now();
+        try {
+            // Mock Sora implementation - no actual API endpoint yet
+            await new Promise(resolve => setTimeout(resolve, 4000)); // Simulate longer generation time
+            
+            const endTime = Date.now();
+            const duration = Math.round((endTime - startTime) / 1000);
+
+            // Show placeholder message for Sora
+            this.showVideoMessage(this.soraResult, 'Sora integration coming soon!', `${duration}s`);
+
+        } catch (error) {
+            console.error('Sora Error:', error);
+            this.showVideoError(this.soraResult, `Error: ${error.message}`);
         }
     }
 

@@ -12,7 +12,7 @@ class ImageGenerator {
         this.captionTiming = document.getElementById('captionTiming');
         this.enhancedTiming = document.getElementById('enhancedTiming');
         this.postBtn = document.getElementById('postBtn');
-        this.settingsBtn = document.getElementById('settingsBtn');
+        this.promptsBtn = document.getElementById('promptsBtn');
         this.selectedCard = null;
 
         this.initEventListeners();
@@ -22,7 +22,7 @@ class ImageGenerator {
         this.enhanceBtn.addEventListener('click', () => this.enhancePrompt());
         this.generateBtn.addEventListener('click', () => this.generateImages());
         this.postBtn.addEventListener('click', () => this.postToInstagram());
-        this.settingsBtn.addEventListener('click', () => this.openSettingsModal());
+        this.promptsBtn.addEventListener('click', () => this.openSettingsModal());
 
         // Enable/disable buttons based on input
         this.promptInput.addEventListener('input', () => this.updateButtonStates());

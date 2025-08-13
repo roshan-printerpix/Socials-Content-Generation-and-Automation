@@ -30,6 +30,7 @@
 
 .navbar-nav {
     display: flex;
+    align-items: center;
     gap: 20px;
 }
 
@@ -53,3 +54,4 @@
     background: linear-gradient(135deg, #e90b75 0%, #c2185b 100%);
     box-shadow: 0 4px 15px rgba(233, 11, 117, 0.3);
 }
+
