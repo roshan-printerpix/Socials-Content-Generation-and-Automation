@@ -24,7 +24,7 @@ A 100–150 word vivid, lifestyle or interior design description that:
 
 **"colour_palette"**: 3–4 descriptive colour words matching the country's 2025 décor trends
 
-**"aspect_ratio"**: "1:1" for Instagram, "4:5" for other
+**"aspect_ratio"**: "1:1"
 
 ## Creative Style Directives
 

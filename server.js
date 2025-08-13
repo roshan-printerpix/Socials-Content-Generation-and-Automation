@@ -15,6 +15,7 @@ const PORT = 3000;
 const cloudinary = require('cloudinary').v2;
 const axios = require('axios');
 const promptManager = require('./utils/promptManager');
+const { saveGeneratedImage, getGeneratedImages, saveInstagramPost } = require('./utils/supabase');
 
 // --- OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -82,6 +83,17 @@ app.post('/api/imagen3', async (req, res) => {
         const base64Image = response?.generatedImages?.[0]?.image?.imageBytes;
         if (!base64Image) throw new Error('No image data in Imagen response');
 
+        // Save to database
+        const imageData = {
+            model: 'imagen-3',
+            prompt: prompt,
+            base64_image: base64Image,
+            generation_time: new Date().toISOString(),
+            status: 'completed'
+        };
+
+        await saveGeneratedImage(imageData);
+
         res.json({ base64: base64Image });
     } catch (error) {
         console.error('Imagen Error:', error);
@@ -108,6 +120,17 @@ app.post('/api/imagen4', async (req, res) => {
 
         const base64Image = response?.generatedImages?.[0]?.image?.imageBytes;
         if (!base64Image) throw new Error('No image data in Imagen response');
+
+        // Save to database
+        const imageData = {
+            model: 'imagen-4',
+            prompt: prompt,
+            base64_image: base64Image,
+            generation_time: new Date().toISOString(),
+            status: 'completed'
+        };
+
+        await saveGeneratedImage(imageData);
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -136,6 +159,17 @@ app.post('/api/imagen4ultra', async (req, res) => {
         const base64Image = response?.generatedImages?.[0]?.image?.imageBytes;
         if (!base64Image) throw new Error('No image data in Imagen response');
 
+        // Save to database
+        const imageData = {
+            model: 'imagen-4-ultra',
+            prompt: prompt,
+            base64_image: base64Image,
+            generation_time: new Date().toISOString(),
+            status: 'completed'
+        };
+
+        await saveGeneratedImage(imageData);
+
         res.json({ base64: base64Image });
     } catch (error) {
         console.error('Imagen 4 Ultra Error:', error);
@@ -156,7 +190,7 @@ app.post('/api/enhance-prompt', async (req, res) => {
 
         // NOTE: if you don't actually have access to a "gpt-5-*" model, use gpt-4o instead.
         const response = await openai.chat.completions.create({
-            model: 'gpt-5-2025-08-07',
+            model: 'gpt-5-nano',
             messages: [{ role: 'user', content: `${systemPrompt}\n\nUser scenario: ${prompt}` }],
             temperature: 1
         });
@@ -187,7 +221,7 @@ app.post('/api/generate-caption', async (req, res) => {
         const captionPrompt = systemPrompts.imageCaptionPrompt.replace('{prompt}', prompt);
 
         const response = await openai.chat.completions.create({
-            model: 'gpt-5-2025-08-07',
+            model: 'gpt-5-nano',
             messages: [{ role: 'user', content: captionPrompt }],
             temperature: 1
         });
@@ -320,6 +354,20 @@ app.post('/api/instagram/post', upload.single('image'), async (req, res) => {
 
         const postId = publishRes.data.id;
         console.log('📤 Post published:', postId);
+
+        // Save Instagram post to database
+        const postData = {
+            post_id: postId,
+            model: model,
+            caption: caption,
+            image_url: imageUrl,
+            cloudinary_url: imageUrl,
+            caption_length: caption.length,
+            posted_at: new Date().toISOString(),
+            status: 'published'
+        };
+
+        await saveInstagramPost(postData);
 
         res.json({ success: true, postId, imageUrl, captionLength: caption.length, model });
     } catch (error) {
@@ -579,6 +627,53 @@ app.post('/api/instagram/post-video', upload.single('video'), async (req, res) =
     } catch (error) {
         console.error('Instagram Video Post Error:', error);
         res.status(500).json({ error: error.message || 'Failed to post video to Instagram' });
+    }
+});
+
+// ===================== Database API Endpoints =====================
+
+app.get('/api/generated-images', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const images = await getGeneratedImages(limit);
+        res.json({ success: true, images, count: images.length });
+    } catch (error) {
+        console.error('Error fetching generated images:', error);
+        res.status(500).json({ error: 'Failed to fetch generated images' });
+    }
+});
+
+app.get('/api/generated-images/stats', async (req, res) => {
+    try {
+        const images = await getGeneratedImages(1000); // Get more for stats
+
+        const stats = {
+            total: images.length,
+            byModel: {},
+            byDate: {},
+            recentActivity: images.slice(0, 10)
+        };
+
+        // Count by model
+        images.forEach(img => {
+            stats.byModel[img.model] = (stats.byModel[img.model] || 0) + 1;
+        });
+
+        // Count by date (last 7 days)
+        const last7Days = new Date();
+        last7Days.setDate(last7Days.getDate() - 7);
+
+        images.forEach(img => {
+            const date = new Date(img.generation_time).toDateString();
+            if (new Date(img.generation_time) >= last7Days) {
+                stats.byDate[date] = (stats.byDate[date] || 0) + 1;
+            }
+        });
+
+        res.json({ success: true, stats });
+    } catch (error) {
+        console.error('Error fetching image stats:', error);
+        res.status(500).json({ error: 'Failed to fetch image statistics' });
     }
 });
 

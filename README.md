@@ -84,6 +84,10 @@ A comprehensive web application that generates marketing images and videos using
    CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
    CLOUDINARY_API_KEY=your_cloudinary_api_key
    CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+   
+   # Supabase Database (Optional)
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
 4. **Start the application**
