@@ -165,9 +165,10 @@ app.post('/api/enhance-prompt', async (req, res) => {
 
         try {
             const jsonResponse = JSON.parse(enhancedContent);
-            const enhancedPrompt = jsonResponse.scene || enhancedContent;
-            res.json({ enhancedPrompt });
+            // Return the full JSON response as the enhanced prompt
+            res.json({ enhancedPrompt: JSON.stringify(jsonResponse, null, 2) });
         } catch {
+            // If JSON parsing fails, return the raw content
             res.json({ enhancedPrompt: enhancedContent });
         }
     } catch (error) {
