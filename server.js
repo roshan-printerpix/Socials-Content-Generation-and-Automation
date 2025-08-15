@@ -6,6 +6,7 @@ const path = require('path');
 const multer = require('multer');
 const { OpenAI } = require('openai');
 const { GoogleGenAI } = require('@google/genai');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
@@ -76,7 +77,7 @@ app.post('/api/imagen3', async (req, res) => {
 
         // Save to Supabase Storage
         const storagePath = await saveImageToStorage(base64Image, 'imagen-3');
-        
+
         // Auto-tag the image based on prompt content
         if (storagePath) {
             await autoTagImage(storagePath, prompt);
@@ -111,7 +112,7 @@ app.post('/api/imagen4', async (req, res) => {
 
         // Save to Supabase Storage
         const storagePath = await saveImageToStorage(base64Image, 'imagen-4');
-        
+
         // Auto-tag the image based on prompt content
         if (storagePath) {
             await autoTagImage(storagePath, prompt);
@@ -146,7 +147,7 @@ app.post('/api/imagen4ultra', async (req, res) => {
 
         // Save to Supabase Storage
         const storagePath = await saveImageToStorage(base64Image, 'imagen-4-ultra');
-        
+
         // Auto-tag the image based on prompt content
         if (storagePath) {
             await autoTagImage(storagePath, prompt);
@@ -601,15 +602,15 @@ async function saveImageToStorage(base64Image, model) {
     try {
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         // Convert base64 to buffer
         const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
         const imageBuffer = Buffer.from(base64Data, 'base64');
-        
+
         // Generate unique filename
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `${model}/${timestamp}-${Math.random().toString(36).substring(2, 15)}.png`;
-        
+
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('generated-images')
@@ -625,7 +626,7 @@ async function saveImageToStorage(base64Image, model) {
 
         console.log(`✅ Image saved to storage: ${filename}`);
         return filename; // Return the storage path for tagging
-        
+
     } catch (error) {
         console.error('Save to storage error:', error);
         return null;
@@ -638,21 +639,21 @@ async function autoTagImage(storagePath, prompt) {
     try {
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         // Get all available tags
         const { data: tags, error: tagsError } = await supabase
             .from('product_tags')
             .select('*')
             .eq('is_active', true);
-            
+
         if (tagsError || !tags) {
             console.error('Error fetching tags for auto-tagging:', tagsError);
             return;
         }
-        
+
         const promptLower = prompt.toLowerCase();
         const suggestedTags = [];
-        
+
         // Smart tagging based on prompt content
         const tagKeywords = {
             'lab-print': ['professional', 'high quality', 'premium', 'lab', 'print', 'photo'],
@@ -675,17 +676,17 @@ async function autoTagImage(storagePath, prompt) {
             'photo-tile': ['tile', 'mosaic', 'wall', 'decoration', 'artistic', 'modern'],
             'mouse-mat': ['mouse', 'pad', 'desk', 'office', 'computer', 'workspace']
         };
-        
+
         // Check each tag for keyword matches
         tags.forEach(tag => {
             const keywords = tagKeywords[tag.name] || [];
             const hasMatch = keywords.some(keyword => promptLower.includes(keyword));
-            
+
             if (hasMatch) {
                 suggestedTags.push(tag.id);
             }
         });
-        
+
         // Always add some default tags based on common use cases
         const defaultTags = ['photo-prints', 'photo-book', 'canvas'];
         defaultTags.forEach(tagName => {
@@ -694,10 +695,10 @@ async function autoTagImage(storagePath, prompt) {
                 suggestedTags.push(tag.id);
             }
         });
-        
+
         // Limit to 5 tags maximum
         const finalTags = suggestedTags.slice(0, 5);
-        
+
         if (finalTags.length > 0) {
             // Insert image-tag relationships using storage path
             const imageTags = finalTags.map(tagId => ({
@@ -715,7 +716,7 @@ async function autoTagImage(storagePath, prompt) {
                 console.log(`✅ Auto-tagged image ${storagePath} with ${finalTags.length} tags`);
             }
         }
-        
+
     } catch (error) {
         console.error('Auto-tagging error:', error);
     }
@@ -727,13 +728,13 @@ async function autoTagImage(storagePath, prompt) {
 app.get('/api/tags', async (req, res) => {
     try {
         const { createClient } = require('@supabase/supabase-js');
-        
+
         if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
             return res.status(500).json({ error: 'Supabase configuration missing' });
         }
 
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         const { data: tags, error } = await supabase
             .from('product_tags')
             .select('*')
@@ -757,9 +758,9 @@ app.post('/api/images/:storagePath/tags', async (req, res) => {
     try {
         const storagePath = decodeURIComponent(req.params.storagePath);
         const { tagIds } = req.body;
-        
+
         console.log('Add tags request:', { storagePath, tagIds });
-        
+
         if (!storagePath || !tagIds || !Array.isArray(tagIds)) {
             console.log('Validation failed:', { storagePath: !!storagePath, tagIds: !!tagIds, isArray: Array.isArray(tagIds) });
             return res.status(400).json({ error: 'Storage path and tag IDs array required' });
@@ -767,20 +768,20 @@ app.post('/api/images/:storagePath/tags', async (req, res) => {
 
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         // Test database connection
         const { data: testData, error: testError } = await supabase
             .from('product_tags')
             .select('id')
             .limit(1);
-            
+
         if (testError) {
             console.error('Database connection test failed:', testError);
             return res.status(500).json({ error: 'Database connection failed' });
         }
-        
+
         console.log('Database connection OK, found tags:', testData?.length || 0);
-        
+
         // Insert image-tag relationships using storage path
         const imageTags = tagIds.map(tagId => ({
             storage_path: storagePath,
@@ -812,14 +813,14 @@ app.delete('/api/images/:storagePath/tags/:tagId', async (req, res) => {
     try {
         const storagePath = decodeURIComponent(req.params.storagePath);
         const { tagId } = req.params;
-        
+
         if (!storagePath || !tagId) {
             return res.status(400).json({ error: 'Storage path and tag ID required' });
         }
 
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         const { error } = await supabase
             .from('image_tags')
             .delete()
@@ -842,14 +843,14 @@ app.delete('/api/images/:storagePath/tags/:tagId', async (req, res) => {
 app.get('/api/images/:storagePath/tags', async (req, res) => {
     try {
         const storagePath = decodeURIComponent(req.params.storagePath);
-        
+
         if (!storagePath) {
             return res.status(400).json({ error: 'Storage path required' });
         }
 
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         const { data: imageTags, error } = await supabase
             .from('image_tags')
             .select(`
@@ -889,48 +890,48 @@ app.get('/api/test-db', async (req, res) => {
     try {
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         // Test product_tags table
         const { data: tags, error: tagsError } = await supabase
             .from('product_tags')
             .select('id, name, display_name')
             .limit(5);
-            
+
         if (tagsError) {
-            return res.json({ 
-                success: false, 
-                error: 'product_tags table error', 
+            return res.json({
+                success: false,
+                error: 'product_tags table error',
                 details: tagsError.message,
                 suggestion: 'Run the database schema in Supabase SQL Editor'
             });
         }
-        
+
         // Test image_tags table
         const { data: imageTags, error: imageTagsError } = await supabase
             .from('image_tags')
             .select('id')
             .limit(1);
-            
+
         if (imageTagsError) {
-            return res.json({ 
-                success: false, 
-                error: 'image_tags table error', 
+            return res.json({
+                success: false,
+                error: 'image_tags table error',
                 details: imageTagsError.message,
                 suggestion: 'Run the database schema in Supabase SQL Editor'
             });
         }
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: 'Database connection working!',
             productTags: tags?.length || 0,
             sampleTags: tags?.slice(0, 3).map(t => t.display_name) || []
         });
-        
+
     } catch (error) {
-        res.json({ 
-            success: false, 
-            error: 'Database connection failed', 
+        res.json({
+            success: false,
+            error: 'Database connection failed',
             details: error.message,
             suggestion: 'Check SUPABASE_URL and SUPABASE_ANON_KEY in .env file'
         });
@@ -941,57 +942,57 @@ app.get('/api/test-db', async (req, res) => {
 app.get('/api/gallery/debug', async (req, res) => {
     try {
         const { createClient } = require('@supabase/supabase-js');
-        
+
         console.log('Debug: Checking Supabase configuration...');
         console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'Present' : 'Missing');
         console.log('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Present' : 'Missing');
-        
+
         if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
             return res.status(500).json({ error: 'Supabase configuration missing' });
         }
 
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         console.log('Debug: Testing storage bucket access...');
-        
+
         // Test basic bucket access
         const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-        
+
         if (bucketsError) {
             console.error('Debug: Buckets error:', bucketsError);
-            return res.json({ 
-                error: 'Failed to list buckets', 
+            return res.json({
+                error: 'Failed to list buckets',
                 details: bucketsError,
                 step: 'listBuckets'
             });
         }
-        
+
         console.log('Debug: Available buckets:', buckets.map(b => b.name));
-        
+
         // Test generated-images bucket specifically
         const { data: rootFiles, error: rootError } = await supabase.storage
             .from('generated-images')
             .list('', { limit: 10 });
-            
+
         if (rootError) {
             console.error('Debug: Root files error:', rootError);
-            return res.json({ 
-                error: 'Failed to access generated-images bucket', 
+            return res.json({
+                error: 'Failed to access generated-images bucket',
                 details: rootError,
                 step: 'listRootFiles',
                 buckets: buckets.map(b => b.name)
             });
         }
-        
+
         console.log('Debug: Root files/folders:', rootFiles.map(f => f.name));
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             buckets: buckets.map(b => b.name),
             rootItems: rootFiles.map(f => ({ name: f.name, id: f.id })),
             message: 'Supabase connection successful'
         });
-        
+
     } catch (error) {
         console.error('Debug: Exception:', error);
         res.status(500).json({ error: error.message, step: 'exception' });
@@ -1001,13 +1002,13 @@ app.get('/api/gallery/debug', async (req, res) => {
 app.get('/api/gallery/images', async (req, res) => {
     try {
         console.log('Gallery API: Starting request...');
-        
+
         const { createClient } = require('@supabase/supabase-js');
-        
+
         console.log('Gallery API: Checking environment variables...');
         console.log('SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
         console.log('SUPABASE_ANON_KEY exists:', !!process.env.SUPABASE_ANON_KEY);
-        
+
         if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
             console.log('Gallery API: Missing Supabase configuration');
             return res.status(500).json({ error: 'Supabase configuration missing' });
@@ -1015,9 +1016,9 @@ app.get('/api/gallery/images', async (req, res) => {
 
         console.log('Gallery API: Creating Supabase client...');
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         console.log('Gallery API: Testing basic storage access...');
-        
+
         // Simple test - just try to list the root of the bucket
         const { data: rootItems, error: rootError } = await supabase.storage
             .from('generated-images')
@@ -1025,10 +1026,10 @@ app.get('/api/gallery/images', async (req, res) => {
 
         if (rootError) {
             console.error('Gallery API: Root access error:', rootError);
-            return res.status(500).json({ 
-                error: 'Failed to access storage bucket', 
+            return res.status(500).json({
+                error: 'Failed to access storage bucket',
                 details: rootError.message,
-                code: rootError.statusCode 
+                code: rootError.statusCode
             });
         }
 
@@ -1037,36 +1038,36 @@ app.get('/api/gallery/images', async (req, res) => {
 
         // Get images from all model folders
         const images = [];
-        
+
         if (rootItems && rootItems.length > 0) {
             // Find all model folders (imagen-3, imagen-4, imagen-4-ultra, veo-3, etc.)
-            const modelFolders = rootItems.filter(item => 
-                item.name && 
+            const modelFolders = rootItems.filter(item =>
+                item.name &&
                 !item.name.includes('.emptyFolderPlaceholder') &&
                 (item.name.startsWith('imagen-') || item.name.startsWith('veo-'))
             );
-            
+
             console.log(`Gallery API: Found ${modelFolders.length} model folders:`, modelFolders.map(f => f.name));
-            
+
             // Process each model folder
             for (const folder of modelFolders) {
                 try {
                     console.log(`Gallery API: Processing folder: ${folder.name}`);
-                    
+
                     const { data: folderFiles, error: folderError } = await supabase.storage
                         .from('generated-images')
-                        .list(folder.name, { 
+                        .list(folder.name, {
                             limit: 1000,  // Get up to 1000 images per folder
                             sortBy: { column: 'created_at', order: 'desc' }
                         });
-                    
+
                     if (folderError) {
                         console.error(`Gallery API: Error accessing folder ${folder.name}:`, folderError);
                         continue;
                     }
-                    
+
                     console.log(`Gallery API: Found ${folderFiles?.length || 0} files in ${folder.name}`);
-                    
+
                     // Process files from this folder
                     if (folderFiles && folderFiles.length > 0) {
                         const folderImages = folderFiles
@@ -1089,7 +1090,7 @@ app.get('/api/gallery/images', async (req, res) => {
                                     tags: [] // Will be populated if we have database records
                                 };
                             });
-                        
+
                         images.push(...folderImages);
                         console.log(`Gallery API: Added ${folderImages.length} images from ${folder.name}`);
                     }
@@ -1097,10 +1098,10 @@ app.get('/api/gallery/images', async (req, res) => {
                     console.error(`Gallery API: Exception processing folder ${folder.name}:`, folderError);
                 }
             }
-            
+
             // Sort all images by creation date (newest first)
             images.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            
+
             // Try to get tags for images using storage paths
             try {
                 const { data: imageTags, error: tagsError } = await supabase
@@ -1114,7 +1115,7 @@ app.get('/api/gallery/images', async (req, res) => {
                             color
                         )
                     `);
-                
+
                 if (!tagsError && imageTags) {
                     // Map tags to storage images
                     images.forEach(image => {
@@ -1131,9 +1132,9 @@ app.get('/api/gallery/images', async (req, res) => {
         }
 
         console.log(`Gallery API: Returning ${images.length} images`);
-        res.json({ 
-            success: true, 
-            images, 
+        res.json({
+            success: true,
+            images,
             count: images.length,
             debug: {
                 rootItemsFound: rootItems?.length || 0,
@@ -1143,10 +1144,10 @@ app.get('/api/gallery/images', async (req, res) => {
 
     } catch (error) {
         console.error('Gallery API: Exception:', error);
-        res.status(500).json({ 
-            error: 'Failed to load gallery', 
+        res.status(500).json({
+            error: 'Failed to load gallery',
             details: error.message,
-            stack: error.stack 
+            stack: error.stack
         });
     }
 });
@@ -1154,25 +1155,25 @@ app.get('/api/gallery/images', async (req, res) => {
 app.delete('/api/gallery/images/:filename', async (req, res) => {
     try {
         const { filename } = req.params;
-        
+
         if (!filename) {
             return res.status(400).json({ error: 'Filename is required' });
         }
 
         const { createClient } = require('@supabase/supabase-js');
-        
+
         if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
             return res.status(500).json({ error: 'Supabase configuration missing' });
         }
 
         const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-        
+
         // The filename parameter should be the full path (e.g., "imagen-3/2025-08-13T14-06-20-447...")
         // Decode it in case it was URL encoded
         const filePath = decodeURIComponent(filename);
-        
+
         console.log(`Deleting image from storage: ${filePath}`);
-        
+
         // Delete the file from storage
         const { error } = await supabase.storage
             .from('generated-images')
@@ -1192,8 +1193,253 @@ app.delete('/api/gallery/images/:filename', async (req, res) => {
     }
 });
 
+// ===================== Email Notification System =====================
+
+app.post('/api/email/send-images', upload.none(), async (req, res) => {
+    try {
+        const { recipient, subject, message, images } = req.body;
+
+        if (!recipient || !subject || !images) {
+            return res.status(400).json({ error: 'Missing required fields: recipient, subject, or images' });
+        }
+
+        const imageData = JSON.parse(images);
+
+        if (!Array.isArray(imageData) || imageData.length === 0) {
+            return res.status(400).json({ error: 'No images provided' });
+        }
+
+        // For now, we'll use a simple mailto link approach
+        // In production, you'd want to use a proper email service like SendGrid, Nodemailer, etc.
+
+        // Create email body with image information
+        let emailBody = message || '';
+        emailBody += '\n\n--- Images ---\n';
+
+        imageData.forEach((image, index) => {
+            emailBody += `\n${index + 1}. ${image.name}`;
+            emailBody += `\n   Model: ${image.model}`;
+            emailBody += `\n   Size: ${formatFileSize(image.size)}`;
+            emailBody += `\n   URL: ${image.url}\n`;
+        });
+
+        emailBody += '\n\nGenerated by Printerpix Studio';
+
+        // For demonstration, we'll return the email data that would be sent
+        // In production, integrate with your preferred email service
+        const emailData = {
+            to: recipient,
+            subject: subject,
+            body: emailBody,
+            imageCount: imageData.length,
+            images: imageData.map(img => ({
+                name: img.name,
+                url: img.url,
+                model: img.model
+            }))
+        };
+
+        // Log the email for debugging
+        // Actually send the email using nodemailer
+        console.log('📧 Attempting to send email to:', recipient, 'with', imageData.length, 'images');
+
+        // Create email transporter
+        const emailTransporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: process.env.EMAIL_PORT || 587,
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        // Create email content
+        const htmlContent = createHtmlEmailContent(message, imageData);
+        const textContent = createEmailBody(message, imageData);
+
+        // Email options
+        const mailOptions = {
+            from: `"Printerpix Studio" <${process.env.EMAIL_USER}>`,
+            to: recipient,
+            subject: subject,
+            text: textContent,
+            html: htmlContent
+        };
+
+        console.log('📧 Sending email via SMTP to:', recipient);
+
+        // Send email
+        const info = await emailTransporter.sendMail(mailOptions);
+
+        console.log('✅ Email sent successfully! Message ID:', info.messageId);
+
+
+
+        res.json({
+            success: true,
+            message: 'Email sent successfully',
+            emailId: `email_${Date.now()}`,
+            recipient,
+            imageCount: imageData.length
+        });
+
+    } catch (error) {
+        console.error('Email sending error:', error);
+        res.status(500).json({ error: 'Failed to send email' });
+    }
+});
+
+// Helper functions for email
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function formatModelName(model) {
+    const modelMap = {
+        'imagen-3': 'Imagen 3',
+        'imagen-4': 'Imagen 4',
+        'imagen-4-ultra': 'Imagen 4 Ultra',
+        'veo-3': 'Veo 3'
+    };
+    return modelMap[model] || model;
+}
+
+function createEmailBody(message, imageData) {
+    let emailBody = message || 'Hi,\n\nI\'m sharing some images with you from Printerpix Studio.\n\nBest regards';
+    emailBody += '\n\n--- Images ---\n';
+
+    imageData.forEach((image, index) => {
+        emailBody += `\n${index + 1}. ${image.name}`;
+        emailBody += `\n   Model: ${formatModelName(image.model)}`;
+        emailBody += `\n   Size: ${formatFileSize(image.size)}`;
+        emailBody += `\n   URL: ${image.url}\n`;
+    });
+
+    emailBody += '\n\nGenerated by Printerpix Studio';
+    return emailBody;
+}
+
+function createHtmlEmailContent(message, imageData) {
+    const messageHtml = (message || 'Hi,<br><br>I\'m sharing some images with you from Printerpix Studio.<br><br>Best regards').replace(/\n/g, '<br>');
+
+    let imagesHtml = '';
+    imageData.forEach((image, index) => {
+        imagesHtml += `
+            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px;">
+                <h4 style="margin: 0 0 10px 0; color: #374151;">${index + 1}. ${image.name}</h4>
+                <img src="${image.url}" alt="${image.name}" style="max-width: 300px; height: auto; border-radius: 4px; margin-bottom: 10px;">
+                <div style="font-size: 14px; color: #6b7280;">
+                    <strong>Model:</strong> ${formatModelName(image.model)}<br>
+                    <strong>Size:</strong> ${formatFileSize(image.size)}
+                </div>
+                <a href="${image.url}" target="_blank" style="display: inline-block; margin-top: 10px; padding: 8px 16px; background: #e90b75; color: white; text-decoration: none; border-radius: 4px; font-size: 14px;">View Full Size</a>
+            </div>
+        `;
+    });
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Images from Printerpix Studio</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #374151; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #e90b75;">Printerpix Studio</h1>
+                <p style="color: #6b7280;">AI-Generated Images</p>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                ${messageHtml}
+            </div>
+            
+            <h2 style="color: #374151; border-bottom: 2px solid #e90b75; padding-bottom: 10px;">Your Images (${imageData.length})</h2>
+            
+            ${imagesHtml}
+            
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 14px;">
+                <p>Generated by <strong style="color: #e90b75;">Printerpix Studio</strong></p>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+// ===================== Email Test Endpoint =====================
+
+app.get('/api/email/test', (req, res) => {
+    console.log('🔍 Email Configuration Test:');
+    console.log('  EMAIL_HOST:', process.env.EMAIL_HOST || 'NOT SET');
+    console.log('  EMAIL_USER:', process.env.EMAIL_USER || 'NOT SET');
+    console.log('  EMAIL_PASS:', process.env.EMAIL_PASS ? 'SET (hidden)' : 'NOT SET');
+    console.log('  EMAIL_PORT:', process.env.EMAIL_PORT || '587 (default)');
+
+    // Test nodemailer
+    try {
+        console.log('🔍 Testing nodemailer import:', typeof nodemailer);
+        console.log('🔍 createTransport function:', typeof nodemailer.createTransport);
+
+        if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            const testTransporter = nodemailer.createTransport({
+                host: process.env.EMAIL_HOST,
+                port: process.env.EMAIL_PORT || 587,
+                secure: process.env.EMAIL_SECURE === 'true',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS
+                }
+            });
+
+            testTransporter.verify((error, success) => {
+                if (error) {
+                    console.log('❌ Email connection failed:', error.message);
+                } else {
+                    console.log('✅ Email connection successful!');
+                }
+            });
+
+            res.json({
+                status: 'configured',
+                host: process.env.EMAIL_HOST,
+                user: process.env.EMAIL_USER,
+                port: process.env.EMAIL_PORT || 587,
+                message: 'Email is configured. Check server console for connection test results.'
+            });
+        } else {
+            res.json({
+                status: 'not_configured',
+                message: 'Email credentials missing. Add EMAIL_HOST, EMAIL_USER, and EMAIL_PASS to .env file.',
+                current: {
+                    host: process.env.EMAIL_HOST || null,
+                    user: process.env.EMAIL_USER || null,
+                    pass: process.env.EMAIL_PASS ? 'SET' : null
+                }
+            });
+        }
+    } catch (error) {
+        res.json({
+            status: 'error',
+            error: error.message
+        });
+    }
+});
+
 // ===================== Boot =====================
 
 app.listen(PORT, () => {
     console.log(`✨ Server running at http://localhost:${PORT}`);
+    
+    if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        console.log('✅ Email credentials found - emails should work!');
+    } else {
+        console.log('⚠️  Email credentials missing - using mailto fallback');
+    }
 });

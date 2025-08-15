@@ -9,6 +9,10 @@ class Gallery {
         this.selectedImage = null;
         this.availableTags = [];
         
+        // Email notification system
+        this.notifyMode = false;
+        this.selectedImages = [];
+        
         this.initElements();
         this.initEventListeners();
         this.initializeDropdowns();
@@ -59,6 +63,21 @@ class Gallery {
         this.currentTags = document.getElementById('currentTags');
         this.tagSelect = document.getElementById('tagSelect');
         this.addTagBtn = document.getElementById('addTagBtn');
+        
+        // Email notification elements
+        this.notifyModeBtn = document.getElementById('notifyModeBtn');
+        this.proceedButton = document.getElementById('proceedButton');
+        this.selectedCount = document.getElementById('selectedCount');
+        this.proceedBtn = document.getElementById('proceedBtn');
+        this.emailModal = document.getElementById('emailModal');
+        this.emailModalClose = document.getElementById('emailModalClose');
+        this.recipientEmail = document.getElementById('recipientEmail');
+        this.emailSubject = document.getElementById('emailSubject');
+        this.emailMessage = document.getElementById('emailMessage');
+        this.emailImageCount = document.getElementById('emailImageCount');
+        this.emailImageGrid = document.getElementById('emailImageGrid');
+        this.cancelEmailBtn = document.getElementById('cancelEmailBtn');
+        this.sendEmailBtn = document.getElementById('sendEmailBtn');
     }
 
     initEventListeners() {
@@ -106,10 +125,24 @@ class Gallery {
             this.addTagBtn.disabled = !this.tagSelect.value;
         });
         
+        // Email notification event listeners
+        this.notifyModeBtn.addEventListener('click', () => this.toggleNotifyMode());
+        this.proceedBtn.addEventListener('click', () => this.openEmailModal());
+        this.emailModalClose.addEventListener('click', () => this.closeEmailModal());
+        this.cancelEmailBtn.addEventListener('click', () => this.closeEmailModal());
+        this.sendEmailBtn.addEventListener('click', () => this.sendEmail());
+        
+        // Close email modal when clicking outside
+        this.emailModal.addEventListener('click', (e) => {
+            if (e.target === this.emailModal) this.closeEmailModal();
+        });
+        
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (this.imageModal.style.display !== 'none') {
+                if (this.emailModal.style.display !== 'none') {
+                    this.closeEmailModal();
+                } else if (this.imageModal.style.display !== 'none') {
                     this.closeModal();
                 } else if (this.modelDropdownMenu.classList.contains('show')) {
                     this.closeModelDropdown();
@@ -207,7 +240,17 @@ class Gallery {
     createGalleryItem(image, index) {
         const item = document.createElement('div');
         item.className = 'gallery-item';
-        item.addEventListener('click', () => this.openModal(image, index));
+        
+        // Add notify mode class if in notify mode
+        if (this.notifyMode) {
+            item.classList.add('notify-mode');
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleImageSelection(image);
+            });
+        } else {
+            item.addEventListener('click', () => this.openModal(image, index));
+        }
 
         const imageContainer = document.createElement('div');
         imageContainer.className = 'gallery-item-image-container';
@@ -288,6 +331,11 @@ class Gallery {
         item.appendChild(imageContainer);
         item.appendChild(info);
 
+        // Check if this image is selected
+        if (this.notifyMode && this.selectedImages.some(selected => selected.id === image.id)) {
+            item.classList.add('selected');
+        }
+
         return item;
     }
 
@@ -302,7 +350,176 @@ class Gallery {
         this.galleryGrid.classList.toggle('list-view', view === 'list');
     }
 
+    // Tag dropdown methods
+    toggleTagDropdown() {
+        const isOpen = this.tagDropdownMenu.classList.contains('show');
+        if (isOpen) {
+            this.closeTagDropdown();
+        } else {
+            this.openTagDropdown();
+        }
+    }
 
+    openTagDropdown() {
+        this.tagDropdownTrigger.classList.add('active');
+        this.tagDropdownMenu.classList.add('show');
+    }
+
+    closeTagDropdown() {
+        this.tagDropdownTrigger.classList.remove('active');
+        this.tagDropdownMenu.classList.remove('show');
+    }
+
+    toggleModelDropdown() {
+        const isOpen = this.modelDropdownMenu.classList.contains('show');
+        if (isOpen) {
+            this.closeModelDropdown();
+        } else {
+            this.openModelDropdown();
+        }
+    }
+
+    openModelDropdown() {
+        this.modelDropdownTrigger.classList.add('active');
+        this.modelDropdownMenu.classList.add('show');
+    }
+
+    closeModelDropdown() {
+        this.modelDropdownTrigger.classList.remove('active');
+        this.modelDropdownMenu.classList.remove('show');
+    }
+
+    updateSelectedModels() {
+        // Get selected models from checkboxes
+        this.selectedModels = Array.from(this.modelCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+        
+        // Update dropdown label
+        this.updateModelDropdownLabel();
+        
+        // Apply filter and re-render
+        this.applyFilter();
+        this.renderFilteredGallery();
+    }
+
+    updateModelDropdownLabel() {
+        const selectedCount = this.selectedModels.length;
+        const totalCount = this.modelCheckboxes.length;
+        
+        if (selectedCount === 0) {
+            this.modelDropdownLabel.textContent = 'No Models Selected';
+        } else if (selectedCount === totalCount) {
+            this.modelDropdownLabel.textContent = 'All Models';
+        } else if (selectedCount === 1) {
+            const modelName = this.formatModelName(this.selectedModels[0]);
+            this.modelDropdownLabel.textContent = modelName;
+        } else {
+            this.modelDropdownLabel.textContent = `${selectedCount} Models Selected`;
+        }
+    }
+
+    selectAllModels() {
+        // Check all checkboxes
+        this.modelCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        
+        // Update selected models and apply filter
+        this.updateSelectedModels();
+    }
+
+    clearAllModels() {
+        // Uncheck all checkboxes
+        this.modelCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Update selected models and apply filter
+        this.updateSelectedModels();
+    }
+
+    updateSelectedTags() {
+        // Get selected tags from checkboxes
+        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        this.selectedTags = Array.from(tagCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => parseInt(checkbox.value));
+        
+        // Update dropdown label
+        this.updateTagDropdownLabel();
+        
+        // Apply filter and re-render
+        this.applyFilter();
+        this.renderFilteredGallery();
+    }
+
+    updateTagDropdownLabel() {
+        const selectedCount = this.selectedTags.length;
+        const totalCount = this.availableTags.length;
+        
+        if (selectedCount === 0) {
+            this.tagDropdownLabel.textContent = 'All Tags';
+        } else if (selectedCount === totalCount) {
+            this.tagDropdownLabel.textContent = 'All Tags';
+        } else if (selectedCount === 1) {
+            const tag = this.availableTags.find(t => t.id === this.selectedTags[0]);
+            this.tagDropdownLabel.textContent = tag ? tag.display_name : 'Unknown Tag';
+        } else {
+            this.tagDropdownLabel.textContent = `${selectedCount} Tags Selected`;
+        }
+    }
+
+    selectAllTags() {
+        // Check all tag checkboxes
+        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        tagCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        
+        // Update selected tags and apply filter
+        this.updateSelectedTags();
+    }
+
+    clearAllTags() {
+        // Uncheck all tag checkboxes
+        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        tagCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Update selected tags and apply filter
+        this.updateSelectedTags();
+    }
+
+    populateTagDropdown() {
+        // Clear existing options
+        this.tagDropdownOptions.innerHTML = '';
+        
+        // Add available tags as options
+        this.availableTags.forEach(tag => {
+            const label = document.createElement('label');
+            label.className = 'dropdown-option';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = tag.id;
+            checkbox.addEventListener('change', () => this.updateSelectedTags());
+            
+            const checkmark = document.createElement('span');
+            checkmark.className = 'checkmark';
+            
+            const optionText = document.createElement('span');
+            optionText.className = 'option-text';
+            optionText.textContent = tag.display_name;
+            
+            label.appendChild(checkbox);
+            label.appendChild(checkmark);
+            label.appendChild(optionText);
+            
+            this.tagDropdownOptions.appendChild(label);
+        });
+    }
 
     initializeDropdowns() {
         // Set initial checkbox states based on selectedModels
@@ -487,177 +704,6 @@ class Gallery {
         return modelMap[model] || model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
-    // Tag dropdown methods
-    toggleTagDropdown() {
-        const isOpen = this.tagDropdownMenu.classList.contains('show');
-        if (isOpen) {
-            this.closeTagDropdown();
-        } else {
-            this.openTagDropdown();
-        }
-    }
-
-    openTagDropdown() {
-        this.tagDropdownTrigger.classList.add('active');
-        this.tagDropdownMenu.classList.add('show');
-    }
-
-    closeTagDropdown() {
-        this.tagDropdownTrigger.classList.remove('active');
-        this.tagDropdownMenu.classList.remove('show');
-    }
-
-    toggleModelDropdown() {
-        const isOpen = this.modelDropdownMenu.classList.contains('show');
-        if (isOpen) {
-            this.closeModelDropdown();
-        } else {
-            this.openModelDropdown();
-        }
-    }
-
-    openModelDropdown() {
-        this.modelDropdownTrigger.classList.add('active');
-        this.modelDropdownMenu.classList.add('show');
-    }
-
-    closeModelDropdown() {
-        this.modelDropdownTrigger.classList.remove('active');
-        this.modelDropdownMenu.classList.remove('show');
-    }
-
-    updateSelectedModels() {
-        // Get selected models from checkboxes
-        this.selectedModels = Array.from(this.modelCheckboxes)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => checkbox.value);
-        
-        // Update dropdown label
-        this.updateModelDropdownLabel();
-        
-        // Apply filter and re-render
-        this.applyFilter();
-        this.renderFilteredGallery();
-    }
-
-    updateModelDropdownLabel() {
-        const selectedCount = this.selectedModels.length;
-        const totalCount = this.modelCheckboxes.length;
-        
-        if (selectedCount === 0) {
-            this.modelDropdownLabel.textContent = 'No Models Selected';
-        } else if (selectedCount === totalCount) {
-            this.modelDropdownLabel.textContent = 'All Models';
-        } else if (selectedCount === 1) {
-            const modelName = this.formatModelName(this.selectedModels[0]);
-            this.modelDropdownLabel.textContent = modelName;
-        } else {
-            this.modelDropdownLabel.textContent = `${selectedCount} Models Selected`;
-        }
-    }
-
-    selectAllModels() {
-        // Check all checkboxes
-        this.modelCheckboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        
-        // Update selected models and apply filter
-        this.updateSelectedModels();
-    }
-
-    clearAllModels() {
-        // Uncheck all checkboxes
-        this.modelCheckboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        
-        // Update selected models and apply filter
-        this.updateSelectedModels();
-    }
-
-    updateSelectedTags() {
-        // Get selected tags from checkboxes
-        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
-        this.selectedTags = Array.from(tagCheckboxes)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => parseInt(checkbox.value));
-        
-        // Update dropdown label
-        this.updateTagDropdownLabel();
-        
-        // Apply filter and re-render
-        this.applyFilter();
-        this.renderFilteredGallery();
-    }
-
-    updateTagDropdownLabel() {
-        const selectedCount = this.selectedTags.length;
-        const totalCount = this.availableTags.length;
-        
-        if (selectedCount === 0) {
-            this.tagDropdownLabel.textContent = 'All Tags';
-        } else if (selectedCount === totalCount) {
-            this.tagDropdownLabel.textContent = 'All Tags';
-        } else if (selectedCount === 1) {
-            const tag = this.availableTags.find(t => t.id === this.selectedTags[0]);
-            this.tagDropdownLabel.textContent = tag ? tag.display_name : 'Unknown Tag';
-        } else {
-            this.tagDropdownLabel.textContent = `${selectedCount} Tags Selected`;
-        }
-    }
-
-    selectAllTags() {
-        // Check all tag checkboxes
-        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
-        tagCheckboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        
-        // Update selected tags and apply filter
-        this.updateSelectedTags();
-    }
-
-    clearAllTags() {
-        // Uncheck all tag checkboxes
-        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
-        tagCheckboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        
-        // Update selected tags and apply filter
-        this.updateSelectedTags();
-    }
-
-    populateTagDropdown() {
-        // Clear existing options
-        this.tagDropdownOptions.innerHTML = '';
-        
-        // Add available tags as options
-        this.availableTags.forEach(tag => {
-            const label = document.createElement('label');
-            label.className = 'dropdown-option';
-            
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = tag.id;
-            checkbox.addEventListener('change', () => this.updateSelectedTags());
-            
-            const checkmark = document.createElement('span');
-            checkmark.className = 'checkmark';
-            
-            const optionText = document.createElement('span');
-            optionText.className = 'option-text';
-            optionText.textContent = tag.display_name;
-            
-            label.appendChild(checkbox);
-            label.appendChild(checkmark);
-            label.appendChild(optionText);
-            
-            this.tagDropdownOptions.appendChild(label);
-        });
-    }
-
     // Tag Management Methods
     async loadTags() {
         try {
@@ -813,6 +859,186 @@ class Gallery {
 
         } catch (error) {
             console.error('Error refreshing image tags:', error);
+        }
+    }
+
+    // Email Notification System Methods
+    toggleNotifyMode() {
+        this.notifyMode = !this.notifyMode;
+        this.notifyModeBtn.classList.toggle('active', this.notifyMode);
+        
+        if (this.notifyMode) {
+            // Enable notify mode
+            this.selectedImages = [];
+            this.updateProceedButton();
+            this.renderFilteredGallery(); // Re-render to add notify mode classes
+        } else {
+            // Disable notify mode
+            this.selectedImages = [];
+            this.proceedButton.style.display = 'none';
+            this.renderFilteredGallery(); // Re-render to remove notify mode classes
+        }
+    }
+
+    toggleImageSelection(image) {
+        const existingIndex = this.selectedImages.findIndex(selected => selected.id === image.id);
+        
+        if (existingIndex !== -1) {
+            // Remove from selection
+            this.selectedImages.splice(existingIndex, 1);
+        } else {
+            // Add to selection
+            this.selectedImages.push(image);
+        }
+        
+        this.updateProceedButton();
+        this.renderFilteredGallery(); // Re-render to update selection states
+    }
+
+    updateProceedButton() {
+        const count = this.selectedImages.length;
+        
+        if (count > 0) {
+            this.selectedCount.textContent = `${count} image${count > 1 ? 's' : ''} selected`;
+            this.proceedButton.style.display = 'block';
+        } else {
+            this.proceedButton.style.display = 'none';
+        }
+    }
+
+    openEmailModal() {
+        if (this.selectedImages.length === 0) {
+            alert('Please select at least one image to proceed.');
+            return;
+        }
+        
+        // Populate email modal with selected images
+        this.populateEmailModal();
+        this.emailModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeEmailModal() {
+        this.emailModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    populateEmailModal() {
+        // Update image count
+        this.emailImageCount.textContent = this.selectedImages.length;
+        
+        // Clear and populate image grid
+        this.emailImageGrid.innerHTML = '';
+        
+        this.selectedImages.forEach((image, index) => {
+            const imageItem = document.createElement('div');
+            imageItem.className = 'email-image-item';
+            
+            const img = document.createElement('img');
+            img.src = image.url;
+            img.alt = image.name;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'email-image-remove';
+            removeBtn.innerHTML = '×';
+            removeBtn.title = 'Remove from selection';
+            removeBtn.addEventListener('click', () => {
+                this.removeImageFromEmail(index);
+            });
+            
+            imageItem.appendChild(img);
+            imageItem.appendChild(removeBtn);
+            this.emailImageGrid.appendChild(imageItem);
+        });
+    }
+
+    removeImageFromEmail(index) {
+        this.selectedImages.splice(index, 1);
+        this.populateEmailModal();
+        this.updateProceedButton();
+        
+        // If no images left, close modal
+        if (this.selectedImages.length === 0) {
+            this.closeEmailModal();
+        }
+    }
+
+    async sendEmail() {
+        const recipient = this.recipientEmail.value.trim();
+        const subject = this.emailSubject.value.trim();
+        const message = this.emailMessage.value.trim();
+        
+        if (!recipient) {
+            alert('Please enter a recipient email address.');
+            this.recipientEmail.focus();
+            return;
+        }
+        
+        if (!subject) {
+            alert('Please enter an email subject.');
+            this.emailSubject.focus();
+            return;
+        }
+        
+        if (this.selectedImages.length === 0) {
+            alert('No images selected to send.');
+            return;
+        }
+        
+        this.sendEmailBtn.disabled = true;
+        this.sendEmailBtn.textContent = 'Sending...';
+        
+        try {
+            const formData = new FormData();
+            formData.append('recipient', recipient);
+            formData.append('subject', subject);
+            formData.append('message', message);
+            
+            // Add image URLs and metadata
+            const imageData = this.selectedImages.map(image => ({
+                url: image.url,
+                name: image.name,
+                model: image.model,
+                size: image.size
+            }));
+            formData.append('images', JSON.stringify(imageData));
+            
+            const response = await fetch('/api/email/send-images', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.method === 'mailto') {
+                // Handle mailto fallback
+                const userConfirmed = confirm(`Email credentials not configured on server.\n\nWould you like to open your email client with pre-filled content?\n\nNote: Configure EMAIL_HOST, EMAIL_USER, and EMAIL_PASS in your .env file for automatic sending.`);
+                
+                if (userConfirmed && result.mailtoLink) {
+                    window.location.href = result.mailtoLink;
+                }
+                
+                alert(`Email client opened with content for ${recipient}!`);
+            } else {
+                // Handle successful SMTP sending
+                alert(`Email sent successfully to ${recipient}!`);
+            }
+            
+            // Reset and close
+            this.closeEmailModal();
+            this.toggleNotifyMode(); // Exit notify mode
+            
+        } catch (error) {
+            console.error('Error sending email:', error);
+            alert(`Failed to send email: ${error.message}`);
+        } finally {
+            this.sendEmailBtn.disabled = false;
+            this.sendEmailBtn.textContent = 'Send Email';
         }
     }
 }

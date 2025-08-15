@@ -91,6 +91,10 @@
           <button id="gridViewBtn" class="view-btn active">Grid</button>
           <button id="listViewBtn" class="view-btn">List</button>
         </div>
+        
+        <div class="notify-toggle">
+          <button id="notifyModeBtn" class="notify-btn">Notify</button>
+        </div>
       </div>
     </div>
 
@@ -168,6 +172,54 @@
           <button id="downloadBtn" class="action-btn download-btn">Download</button>
           <button id="deleteBtn" class="action-btn delete-btn">Delete</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Proceed Button -->
+  <div id="proceedButton" class="proceed-button" style="display: none;">
+    <div class="proceed-content">
+      <span id="selectedCount">0 images selected</span>
+      <button id="proceedBtn" class="proceed-btn">Proceed</button>
+    </div>
+  </div>
+
+  <!-- Email Modal -->
+  <div id="emailModal" class="modal-overlay" style="display: none;">
+    <div class="email-modal-content">
+      <div class="email-header">
+        <h2>Send Images via Email</h2>
+        <button class="modal-close" id="emailModalClose">&times;</button>
+      </div>
+      <div class="email-body">
+        <div class="email-form">
+          <div class="form-group">
+            <label for="recipientEmail">To:</label>
+            <input type="email" id="recipientEmail" placeholder="Enter recipient email address" required>
+          </div>
+          <div class="form-group">
+            <label for="emailSubject">Subject:</label>
+            <input type="text" id="emailSubject" value="Images from Printerpix Studio" required>
+          </div>
+          <div class="form-group">
+            <label for="emailMessage">Message:</label>
+            <textarea id="emailMessage" rows="6" placeholder="Add your message here...">Hi,
+
+I'm sharing some images with you from Printerpix Studio. Please find the attached images below.
+
+Best regards</textarea>
+          </div>
+          <div class="selected-images-preview">
+            <h4>Selected Images (<span id="emailImageCount">0</span>):</h4>
+            <div id="emailImageGrid" class="email-image-grid">
+              <!-- Selected images will be shown here -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="email-actions">
+        <button id="cancelEmailBtn" class="cancel-btn">Cancel</button>
+        <button id="sendEmailBtn" class="send-btn">Send Email</button>
       </div>
     </div>
   </div>
