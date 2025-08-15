@@ -593,15 +593,15 @@ class Gallery {
         if (!this.selectedImage || !this.tagSelect.value) return;
 
         const tagId = this.tagSelect.value;
-        const imageId = this.selectedImage.dbId;
+        const storagePath = this.selectedImage.path;
 
-        if (!imageId) {
-            alert('This image is not in the database yet. Tags can only be added to images that have been generated through the system.');
+        if (!storagePath) {
+            alert('Unable to identify image storage path.');
             return;
         }
 
         try {
-            const response = await fetch(`/api/images/${imageId}/tags`, {
+            const response = await fetch(`/api/images/${encodeURIComponent(storagePath)}/tags`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tagIds: [tagId] })
@@ -628,11 +628,11 @@ class Gallery {
     async removeTagFromImage(tagId) {
         if (!this.selectedImage) return;
 
-        const imageId = this.selectedImage.dbId;
-        if (!imageId) return;
+        const storagePath = this.selectedImage.path;
+        if (!storagePath) return;
 
         try {
-            const response = await fetch(`/api/images/${imageId}/tags/${tagId}`, {
+            const response = await fetch(`/api/images/${encodeURIComponent(storagePath)}/tags/${tagId}`, {
                 method: 'DELETE'
             });
 
@@ -651,10 +651,10 @@ class Gallery {
     }
 
     async refreshImageTags() {
-        if (!this.selectedImage || !this.selectedImage.dbId) return;
+        if (!this.selectedImage || !this.selectedImage.path) return;
 
         try {
-            const response = await fetch(`/api/images/${this.selectedImage.dbId}/tags`);
+            const response = await fetch(`/api/images/${encodeURIComponent(this.selectedImage.path)}/tags`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
