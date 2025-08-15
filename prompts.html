@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printerpix Studio - System Prompts</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/settings.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="container">
+        <div class="prompts-content">
+            <div id="loadingIndicator" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading prompts...</p>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;">
+                <p>Failed to load system prompts. Please check your server connection.</p>
+                <button id="retryBtn" class="retry-btn">Retry</button>
+            </div>
+
+            <div id="promptsForm" class="prompts-form" style="display: none;">
+                <div class="prompt-section">
+                    <h3 class="prompt-title">Image Prompt Generation</h3>
+                    <textarea class="prompt-textarea" id="imageEnhancePrompt" rows="8" placeholder="Enter the system prompt for image enhancement..."></textarea>
+                </div>
+
+                <div class="prompt-section">
+                    <h3 class="prompt-title">Image Caption Generation</h3>
+                    <textarea class="prompt-textarea" id="imageCaptionPrompt" rows="8" placeholder="Enter the system prompt for image captions..."></textarea>
+                </div>
+
+                <div class="prompt-section">
+                    <h3 class="prompt-title">Video Prompt Generation</h3>
+                    <textarea class="prompt-textarea" id="videoEnhancePrompt" rows="8" placeholder="Enter the system prompt for video enhancement..."></textarea>
+                </div>
+
+                <div class="prompt-section">
+                    <h3 class="prompt-title">Video Caption Generation</h3>
+                    <textarea class="prompt-textarea" id="videoCaptionPrompt" rows="8" placeholder="Enter the system prompt for video captions..."></textarea>
+                </div>
+
+                <div class="prompts-actions">
+                    <button id="saveBtn" class="save-btn">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/prompts.js"></script>
+    <script>
+        // Initialize navbar for prompts page
+        initNavbar('prompts');
+    </script>
+</body>
+
+</html>

@@ -49,6 +49,15 @@ app.get('/videos.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'videos.html'));
 });
 
+app.get('/prompts.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'prompts.html'));
+});
+
+// Serve navbar component
+app.get('/components/navbar.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'components/navbar.html'));
+});
+
 app.get('/gallery.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'gallery.html'));
 });
@@ -1436,10 +1445,4 @@ app.get('/api/email/test', (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`✨ Server running at http://localhost:${PORT}`);
-    
-    if (process.env.EMAIL_HOST && process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-        console.log('✅ Email credentials found - emails should work!');
-    } else {
-        console.log('⚠️  Email credentials missing - using mailto fallback');
-    }
 });

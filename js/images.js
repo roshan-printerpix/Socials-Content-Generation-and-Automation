@@ -12,7 +12,7 @@ class ImageGenerator {
         this.captionTiming = document.getElementById('captionTiming');
         this.enhancedTiming = document.getElementById('enhancedTiming');
         this.postBtn = document.getElementById('postBtn');
-        this.promptsBtn = document.getElementById('promptsBtn');
+
         this.selectedCard = null;
 
         this.initEventListeners();
@@ -22,7 +22,7 @@ class ImageGenerator {
         this.enhanceBtn.addEventListener('click', () => this.enhancePrompt());
         this.generateBtn.addEventListener('click', () => this.generateImages());
         this.postBtn.addEventListener('click', () => this.postToInstagram());
-        this.promptsBtn.addEventListener('click', () => this.openSettingsModal());
+
 
         // Enable/disable buttons based on input
         this.promptInput.addEventListener('input', () => this.updateButtonStates());
@@ -540,95 +540,7 @@ class ImageGenerator {
         }
     }
 
-    async openSettingsModal() {
-        try {
-            // Fetch current prompts from server
-            const response = await fetch('/api/system-prompts');
-            const prompts = await response.json();
 
-            this.showSettingsModal(prompts);
-        } catch (error) {
-            console.error('Error fetching system prompts:', error);
-            alert('Error loading system prompts');
-        }
-    }
-
-    showSettingsModal(prompts) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.innerHTML = `
-            <div class="modal">
-                <div class="modal-header">
-                    <h2 class="modal-title">System Prompts Configuration</h2>
-                    <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">×</button>
-                </div>
-                <div class="modal-content">
-                    <div class="prompt-section">
-                        <label class="prompt-label">Image Prompt Generation:</label>
-                        <textarea class="prompt-textarea" id="imageEnhancePrompt">${prompts.imageEnhancePrompt || ''}</textarea>
-                    </div>
-                    <div class="prompt-section">
-                        <label class="prompt-label">Image Caption Generation:</label>
-                        <textarea class="prompt-textarea" id="imageCaptionPrompt">${prompts.imageCaptionPrompt || ''}</textarea>
-                    </div>
-                    <div class="prompt-section">
-                        <label class="prompt-label">Video Prompt Generation:</label>
-                        <textarea class="prompt-textarea" id="videoEnhancePrompt">${prompts.videoEnhancePrompt || ''}</textarea>
-                    </div>
-                    <div class="prompt-section">
-                        <label class="prompt-label">Video Caption Generation:</label>
-                        <textarea class="prompt-textarea" id="videoCaptionPrompt">${prompts.videoCaptionPrompt || ''}</textarea>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="cancel-btn" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-                    <button class="save-btn" onclick="window.imageGenerator.saveSystemPrompts()">Save Changes</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Close modal when clicking outside
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
-            }
-        });
-    }
-
-    async saveSystemPrompts() {
-        const imageEnhancePrompt = document.getElementById('imageEnhancePrompt').value;
-        const imageCaptionPrompt = document.getElementById('imageCaptionPrompt').value;
-        const videoEnhancePrompt = document.getElementById('videoEnhancePrompt').value;
-        const videoCaptionPrompt = document.getElementById('videoCaptionPrompt').value;
-
-        try {
-            const response = await fetch('/api/system-prompts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    imageEnhancePrompt,
-                    imageCaptionPrompt,
-                    videoEnhancePrompt,
-                    videoCaptionPrompt
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to save prompts');
-            }
-
-            alert('System prompts saved successfully!');
-            document.querySelector('.modal-overlay').remove();
-
-        } catch (error) {
-            console.error('Error saving system prompts:', error);
-            alert('Error saving system prompts');
-        }
-    }
 }
 
 // Initialize the app when DOM is loaded

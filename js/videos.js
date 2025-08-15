@@ -10,7 +10,7 @@ class VideoGenerator {
     this.videoCaptionTiming = document.getElementById('videoCaptionTiming');
     this.videoEnhancedTiming = document.getElementById('videoEnhancedTiming');
     this.videoPostBtn = document.getElementById('videoPostBtn');
-    this.promptsBtn = document.getElementById('promptsBtn');
+
     this.selectedVideoCard = null;
 
     this.initVideoEventListeners();
@@ -20,7 +20,7 @@ class VideoGenerator {
     this.videoEnhanceBtn.addEventListener('click', () => this.enhanceVideoPrompt());
     this.videoGenerateBtn.addEventListener('click', () => this.generateVideos());
     this.videoPostBtn.addEventListener('click', () => this.postVideoToInstagram());
-    this.promptsBtn.addEventListener('click', () => this.openSettingsModal());
+
 
     // Enable/disable buttons based on input
     this.videoPromptInput.addEventListener('input', () => this.updateVideoButtonStates());
@@ -383,87 +383,7 @@ class VideoGenerator {
     return await response.blob();
   }
 
-  async openSettingsModal() {
-    try {
-      const response = await fetch('/api/system-prompts');
-      const prompts = await response.json();
-      this.showSettingsModal(prompts);
-    } catch (error) {
-      console.error('Error fetching system prompts:', error);
-      alert('Error loading system prompts');
-    }
-  }
 
-  showSettingsModal(prompts) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal">
-          <div class="modal-header">
-            <h2 class="modal-title">System Prompts Configuration</h2>
-            <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">×</button>
-          </div>
-          <div class="modal-content">
-            <div class="prompt-section">
-              <label class="prompt-label">Image Prompt Generation:</label>
-              <textarea class="prompt-textarea" id="imageEnhancePrompt">${prompts.imageEnhancePrompt || ''}</textarea>
-            </div>
-            <div class="prompt-section">
-              <label class="prompt-label">Image Caption Generation:</label>
-              <textarea class="prompt-textarea" id="imageCaptionPrompt">${prompts.imageCaptionPrompt || ''}</textarea>
-            </div>
-            <div class="prompt-section">
-              <label class="prompt-label">Video Prompt Generation:</label>
-              <textarea class="prompt-textarea" id="videoEnhancePrompt">${prompts.videoEnhancePrompt || ''}</textarea>
-            </div>
-            <div class="prompt-section">
-              <label class="prompt-label">Video Caption Generation:</label>
-              <textarea class="prompt-textarea" id="videoCaptionPrompt">${prompts.videoCaptionPrompt || ''}</textarea>
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button class="cancel-btn" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
-            <button class="save-btn" onclick="window.videoGenerator.saveSystemPrompts()">Save Changes</button>
-          </div>
-        </div>
-      `;
-
-    document.body.appendChild(modal);
-
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
-  }
-
-  async saveSystemPrompts() {
-    const imageEnhancePrompt = document.getElementById('imageEnhancePrompt').value;
-    const imageCaptionPrompt = document.getElementById('imageCaptionPrompt').value;
-    const videoEnhancePrompt = document.getElementById('videoEnhancePrompt').value;
-    const videoCaptionPrompt = document.getElementById('videoCaptionPrompt').value;
-
-    try {
-      const response = await fetch('/api/system-prompts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageEnhancePrompt,
-          imageCaptionPrompt,
-          videoEnhancePrompt,
-          videoCaptionPrompt
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to save prompts');
-
-      alert('System prompts saved successfully.');
-      document.querySelector('.modal-overlay').remove();
-
-    } catch (error) {
-      console.error('Error saving system prompts:', error);
-      alert('Error saving system prompts');
-    }
-  }
 }
 
 // Initialize the app when DOM is loaded
