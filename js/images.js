@@ -34,9 +34,15 @@ class ImageGenerator {
             }
         });
 
+        // Model toggle event listeners
+        document.getElementById('toggleImagen3').addEventListener('change', () => this.updateModelVisibility());
+        document.getElementById('toggleImagen4').addEventListener('change', () => this.updateModelVisibility());
+        document.getElementById('toggleImagen4Ultra').addEventListener('change', () => this.updateModelVisibility());
+
         // Initial button state
         this.updateButtonStates();
         this.updatePostButtonState();
+        this.updateModelVisibility();
 
         // Add click listeners for image selection
         this.initImageSelection();
@@ -56,6 +62,63 @@ class ImageGenerator {
     updatePostButtonState() {
         // Enable post button only if an image is selected
         this.postBtn.disabled = !this.selectedCard;
+    }
+
+    updateModelVisibility() {
+        const imagen3Toggle = document.getElementById('toggleImagen3');
+        const imagen4Toggle = document.getElementById('toggleImagen4');
+        const imagen4UltraToggle = document.getElementById('toggleImagen4Ultra');
+
+        const imagen3Card = document.querySelector('[data-model="imagen3"]');
+        const imagen4Card = document.querySelector('[data-model="imagen4"]');
+        const imagen4UltraCard = document.querySelector('[data-model="imagen4ultra"]');
+
+        // Show/hide cards based on toggle state
+        if (imagen3Card) {
+            imagen3Card.style.display = imagen3Toggle.checked ? 'block' : 'none';
+        }
+        if (imagen4Card) {
+            imagen4Card.style.display = imagen4Toggle.checked ? 'block' : 'none';
+        }
+        if (imagen4UltraCard) {
+            imagen4UltraCard.style.display = imagen4UltraToggle.checked ? 'block' : 'none';
+        }
+
+        // Clear selection if selected model is disabled
+        if (this.selectedCard) {
+            const selectedToggle = document.getElementById(`toggle${this.selectedCard.charAt(0).toUpperCase() + this.selectedCard.slice(1)}`);
+            if (selectedToggle && !selectedToggle.checked) {
+                const selectedCardElement = document.querySelector(`[data-model="${this.selectedCard}"]`);
+                if (selectedCardElement) {
+                    selectedCardElement.classList.remove('selected');
+                }
+                this.selectedCard = null;
+                this.updatePostButtonState();
+            }
+        }
+
+        // Update grid layout for visible cards
+        this.updateGridLayout();
+    }
+
+    updateGridLayout() {
+        const imagen3Toggle = document.getElementById('toggleImagen3');
+        const imagen4Toggle = document.getElementById('toggleImagen4');
+        const imagen4UltraToggle = document.getElementById('toggleImagen4Ultra');
+
+        const enabledCount = [imagen3Toggle.checked, imagen4Toggle.checked, imagen4UltraToggle.checked].filter(Boolean).length;
+        const resultsGrid = document.querySelector('.results-grid');
+
+        if (resultsGrid) {
+            // Adjust grid columns based on enabled models
+            if (enabledCount === 1) {
+                resultsGrid.style.gridTemplateColumns = '1fr';
+            } else if (enabledCount === 2) {
+                resultsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            } else {
+                resultsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            }
+        }
     }
 
     async enhancePrompt() {
@@ -114,20 +177,44 @@ class ImageGenerator {
             return;
         }
 
+        // Check if at least one model is enabled
+        const imagen3Toggle = document.getElementById('toggleImagen3');
+        const imagen4Toggle = document.getElementById('toggleImagen4');
+        const imagen4UltraToggle = document.getElementById('toggleImagen4Ultra');
+
+        const hasEnabledModel = imagen3Toggle.checked || imagen4Toggle.checked || imagen4UltraToggle.checked;
+
+        if (!hasEnabledModel) {
+            alert('Please enable at least one model to generate images!');
+            return;
+        }
+
         this.generateBtn.disabled = true;
         this.generateBtn.textContent = 'Generating...';
 
-        // Show loading states
-        this.showLoading(this.geminiResult);
-        this.showLoading(this.gemini4Result);
-        this.showLoading(this.gemini4UltraResult);
+        // Show loading states and generate images only for enabled models
+        const promises = [];
 
-        // Generate images concurrently
-        const promises = [
-            this.generateGemini(prompt),
-            this.generateGemini4(prompt),
-            this.generateGemini4Ultra(prompt)
-        ];
+        if (imagen3Toggle.checked) {
+            this.showLoading(this.geminiResult);
+            promises.push(this.generateGemini(prompt));
+        } else {
+            this.geminiResult.innerHTML = '<div class="disabled-model">Model disabled</div>';
+        }
+
+        if (imagen4Toggle.checked) {
+            this.showLoading(this.gemini4Result);
+            promises.push(this.generateGemini4(prompt));
+        } else {
+            this.gemini4Result.innerHTML = '<div class="disabled-model">Model disabled</div>';
+        }
+
+        if (imagen4UltraToggle.checked) {
+            this.showLoading(this.gemini4UltraResult);
+            promises.push(this.generateGemini4Ultra(prompt));
+        } else {
+            this.gemini4UltraResult.innerHTML = '<div class="disabled-model">Model disabled</div>';
+        }
 
         try {
             await Promise.allSettled(promises);

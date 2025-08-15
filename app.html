@@ -37,6 +37,38 @@
                     placeholder="Enhanced prompt will appear here... You can edit it before generating posts."></textarea>
                 <div id="enhancedTiming" class="timing-info" style="display: none;"></div>
             </div>
+            
+            <!-- Model Selection Controls -->
+            <div class="model-selection-section">
+                <h3 class="model-selection-title">Select Models to Generate</h3>
+                <div class="model-toggles">
+                    <div class="model-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggleImagen3" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="model-label">Gemini Imagen 3</span>
+                        <span class="cost-indicator">Low cost</span>
+                    </div>
+                    <div class="model-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggleImagen4" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="model-label">Gemini Imagen 4</span>
+                        <span class="cost-indicator">Medium cost</span>
+                    </div>
+                    <div class="model-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggleImagen4Ultra" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="model-label">Gemini Imagen 4 Ultra</span>
+                        <span class="cost-indicator">High cost</span>
+                    </div>
+                </div>
+            </div>
+            
             <div style="margin-top: 15px;">
                 <button id="generateBtn" class="generate-btn" disabled>Generate Post</button>
             </div>
