@@ -254,4 +254,44 @@ body {
     outline: none;
     border-color: #e90b75;
     box-shadow: 0 0 0 3px rgba(233, 11, 117, 0.1);
+}/
+* Video-specific styles */
+.video-result-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.video-card {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.result-video {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+}
+
+.result-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0;
+}
+
+.video-card .loading {
+    aspect-ratio: 16 / 9;
+}
+
+/* Update caption section for video page */
+.caption-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
 }

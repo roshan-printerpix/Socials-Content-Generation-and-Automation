@@ -5,8 +5,6 @@ class VideoGenerator {
     this.videoEnhancedPrompt = document.getElementById('videoEnhancedPrompt');
     this.videoEnhanceBtn = document.getElementById('videoEnhanceBtn');
     this.videoGenerateBtn = document.getElementById('videoGenerateBtn');
-    this.runwayResult = document.getElementById('runwayResult');
-    this.soraResult = document.getElementById('soraResult');
     this.veoResult = document.getElementById('veoResult');
     this.videoPostContent = document.getElementById('videoPostContent');
     this.videoCaptionTiming = document.getElementById('videoCaptionTiming');
@@ -45,31 +43,39 @@ class VideoGenerator {
   }
 
   updateVideoPostButtonState() {
+    // Auto-select the Veo card if it has a video
+    const veoCard = document.querySelector('[data-model="veo"]');
+    const hasVideo = veoCard && veoCard.querySelector('video');
+    
+    if (hasVideo && !this.selectedVideoCard) {
+      veoCard.classList.add('selected');
+      this.selectedVideoCard = 'veo';
+    }
+    
     this.videoPostBtn.disabled = !this.selectedVideoCard;
   }
 
   initVideoSelection() {
-    const videoCards = document.querySelectorAll('.result-card');
-    videoCards.forEach(card => {
-      card.addEventListener('click', (e) => {
+    const videoCard = document.querySelector('.result-card[data-model="veo"]');
+    if (videoCard) {
+      videoCard.addEventListener('click', (e) => {
         if (e.target.closest('.expand-icon')) {
-          this.expandVideo(card);
+          this.expandVideo(videoCard);
           return;
         }
 
         // Toggle selection
-        if (card.classList.contains('selected')) {
-          card.classList.remove('selected');
+        if (videoCard.classList.contains('selected')) {
+          videoCard.classList.remove('selected');
           this.selectedVideoCard = null;
         } else {
-          videoCards.forEach(c => c.classList.remove('selected'));
-          card.classList.add('selected');
-          this.selectedVideoCard = card.dataset.model;
+          videoCard.classList.add('selected');
+          this.selectedVideoCard = 'veo';
         }
 
         this.updateVideoPostButtonState();
       });
-    });
+    }
   }
 
   expandVideo(card) {
@@ -153,21 +159,13 @@ class VideoGenerator {
     this.videoGenerateBtn.disabled = true;
     this.videoGenerateBtn.textContent = 'Generating...';
 
-    this.showVideoLoading(this.runwayResult);
-    this.showVideoLoading(this.soraResult);
     this.showVideoLoading(this.veoResult);
 
-    const promises = [
-      this.generateRunway(prompt),
-      this.generateSora(prompt),
-      this.generateVeo(prompt)
-    ];
-
     try {
-      await Promise.allSettled(promises);
+      await this.generateVeo(prompt);
     } finally {
       this.videoGenerateBtn.disabled = false;
-      this.videoGenerateBtn.textContent = 'Generate Videos';
+      this.videoGenerateBtn.textContent = 'Generate Video';
       this.generateVideoCaption(prompt);
     }
   }
@@ -222,65 +220,7 @@ class VideoGenerator {
     }
   }
 
-  async generateRunway(prompt) {
-    const startTime = Date.now();
-    try {
-      const response = await fetch('/api/runway/video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const endTime = Date.now();
-      const duration = Math.round((endTime - startTime) / 1000);
-
-      if (data.videoUrl) {
-        this.showVideo(this.runwayResult, data.videoUrl, `${duration}s`);
-      } else {
-        throw new Error('No video URL in response');
-      }
-    } catch (error) {
-      console.error('Runway Error:', error);
-      this.showVideoError(this.runwayResult, `Error: ${error.message}`);
-    }
-  }
-
-  async generateSora(prompt) {
-    const startTime = Date.now();
-    try {
-      const response = await fetch('/api/sora/video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const endTime = Date.now();
-      const duration = Math.round((endTime - startTime) / 1000);
-
-      if (data.isPlaceholder) {
-        this.showVideoMessage(this.soraResult, data.message, `${duration}s`);
-      } else if (data.videoUrl) {
-        this.showVideo(this.soraResult, data.videoUrl, `${duration}s`);
-      } else {
-        throw new Error('No video URL in response');
-      }
-    } catch (error) {
-      console.error('Sora Error:', error);
-      this.showVideoError(this.soraResult, `Error: ${error.message}`);
-    }
-  }
 
   async generateVeo(prompt) {
     const startTime = Date.now();
@@ -327,11 +267,16 @@ class VideoGenerator {
         // Display video
         this.showVideo(this.veoResult, objectUrl, `${duration}s`);
 
+        // Auto-select the video card after successful generation
+        const veoCard = this.veoResult.parentElement;
+        veoCard.classList.add('selected');
+        this.selectedVideoCard = 'veo';
+        this.updateVideoPostButtonState();
+
         // Cleanup: revoke previous object URL for this card when replaced or on unload
-        const card = this.veoResult.parentElement;
         const revoke = () => URL.revokeObjectURL(objectUrl);
-        if (card._revokePrev) card._revokePrev();
-        card._revokePrev = revoke;
+        if (veoCard._revokePrev) veoCard._revokePrev();
+        veoCard._revokePrev = revoke;
         window.addEventListener('beforeunload', revoke, { once: true });
 
         return;

@@ -426,120 +426,74 @@ app.post('/api/enhance-video-prompt', async (req, res) => {
     }
 });
 
-// ===================== Video: Runway (mock) =====================
 
-app.post('/api/runway/video', async (req, res) => {
-    try {
-        const { prompt } = req.body;
-        if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
-
-        console.log(`Generating Runway ML video for prompt: ${prompt}`);
-
-        await new Promise(resolve => setTimeout(resolve, 3000)); // mock
-        const mockVideoUrl = `data:video/mp4;base64,mock_video_data_${Date.now()}`;
-
-        res.json({ videoUrl: mockVideoUrl, model: 'runway-ml', duration: '5s' });
-    } catch (error) {
-        console.error('Runway ML Error:', error);
-        res.status(500).json({ error: error.message || 'Failed to generate video with Runway ML' });
-    }
-});
-
-// ===================== Video: Sora (mock) =====================
-
-app.post('/api/sora/video', async (req, res) => {
-    try {
-        const { prompt } = req.body;
-        if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
-
-        console.log(`Generating Sora video for prompt: ${prompt}`);
-
-        // Mock implementation - Sora API not yet available
-        await new Promise(resolve => setTimeout(resolve, 4000)); // Slightly longer for "premium" model
-
-        res.json({
-            success: true,
-            model: 'sora',
-            message: 'Sora integration coming soon! OpenAI has not yet released the Sora API.',
-            duration: '5s',
-            isPlaceholder: true
-        });
-    } catch (error) {
-        console.error('Sora Error:', error);
-        res.status(500).json({ error: error.message || 'Failed to generate video with Sora' });
-    }
-});
-
-// ===================== Video: Veo 3 Generation =====================
-
-// ===================== Video: Veo 3 Generation =====================
 
 // ===================== Video: Veo 3 Generation =====================
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 app.post("/api/veo/video", async (req, res) => {
-  try {
-    const { prompt, negativePrompt /*, personGeneration */ } = req.body;
-    if (!prompt) return res.status(400).json({ error: "Prompt is required" });
-    if (!googleVeoAI) return res.status(500).json({ error: "Google Veo AI not initialized. Check GEMINI_VEO_API_KEY." });
+    try {
+        const { prompt, negativePrompt /*, personGeneration */ } = req.body;
+        if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+        if (!googleVeoAI) return res.status(500).json({ error: "Google Veo AI not initialized. Check GEMINI_VEO_API_KEY." });
 
-    console.log(`[Veo3] start, prompt="${prompt.slice(0,120)}${prompt.length>120?"...":""}"`);
+        console.log(`[Veo3] start, prompt="${prompt.slice(0, 120)}${prompt.length > 120 ? "..." : ""}"`);
 
-    let op = await googleVeoAI.models.generateVideos({
-      model: "veo-3.0-fast-generate-preview",
-      prompt,
-      config: {
-        aspectRatio: "16:9",
-        negativePrompt: negativePrompt || undefined,
-        // personGeneration: "dont_allow" // only if you explicitly need it; MENA defaults apply
-      },
-    });
+        let op = await googleVeoAI.models.generateVideos({
+            model: "veo-3.0-fast-generate-preview",
+            prompt,
+            config: {
+                aspectRatio: "16:9",
+                negativePrompt: negativePrompt || undefined,
+                // personGeneration: "dont_allow" // only if you explicitly need it; MENA defaults apply
+            },
+        });
 
-    const MAX_POLLS = 60;
-    for (let i = 0; i < MAX_POLLS && !op.done; i++) {
-      await sleep(10_000);
-      op = await googleVeoAI.operations.getVideosOperation({ operation: op });
-      if (op.error) throw new Error(op.error.message || "Video generation failed");
+        const MAX_POLLS = 60;
+        for (let i = 0; i < MAX_POLLS && !op.done; i++) {
+            await sleep(10_000);
+            op = await googleVeoAI.operations.getVideosOperation({ operation: op });
+            if (op.error) throw new Error(op.error.message || "Video generation failed");
+        }
+        if (!op.done) throw new Error("Video generation timed out");
+
+        // --- Accept both return shapes ---
+        const videoObj = op.response?.generatedVideos?.[0]?.video;
+
+        // Case 1: SDK returns a signed/authorized URI
+        if (videoObj && typeof videoObj === "object" && (videoObj.uri || videoObj.url || videoObj.downloadUrl)) {
+            const raw = videoObj.uri || videoObj.url || videoObj.downloadUrl;
+            // Some URIs require the API key appended when fetched by the browser.
+            const videoUrl = raw.includes("key=") ? raw : `${raw}${raw.includes("?") ? "&" : "?"}key=${process.env.GEMINI_VEO_API_KEY}`;
+            return res.json({
+                success: true,
+                model: "veo-3.0-fast-generate-preview",
+                videoUrl,                 // <-- frontend can <video src> this directly
+                duration: "8s",
+                aspectRatio: "16:9",
+            });
+        }
+
+        // Case 2: SDK returns a file handle (e.g., "files/abc123")
+        const handle = (typeof videoObj === "string") ? videoObj
+            : (videoObj && videoObj.name ? videoObj.name : null);
+        if (handle) {
+            return res.json({
+                success: true,
+                model: "veo-3.0-fast-generate-preview",
+                file: handle,             // <-- your /download route will use this
+                duration: "8s",
+                aspectRatio: "16:9",
+            });
+        }
+
+        // Neither shape present
+        console.error("[Veo3] unexpected op.response:", JSON.stringify(op.response || {}, null, 2));
+        throw new Error("No downloadable file reference returned");
+    } catch (err) {
+        console.error("[Veo3] error:", err);
+        res.status(500).json({ error: err.message || "Failed to generate video with Veo 3" });
     }
-    if (!op.done) throw new Error("Video generation timed out");
-
-    // --- Accept both return shapes ---
-    const videoObj = op.response?.generatedVideos?.[0]?.video;
-
-    // Case 1: SDK returns a signed/authorized URI
-    if (videoObj && typeof videoObj === "object" && (videoObj.uri || videoObj.url || videoObj.downloadUrl)) {
-      const raw = videoObj.uri || videoObj.url || videoObj.downloadUrl;
-      // Some URIs require the API key appended when fetched by the browser.
-      const videoUrl = raw.includes("key=") ? raw : `${raw}${raw.includes("?") ? "&" : "?"}key=${process.env.GEMINI_VEO_API_KEY}`;
-      return res.json({
-        success: true,
-        model: "veo-3.0-fast-generate-preview",
-        videoUrl,                 // <-- frontend can <video src> this directly
-        duration: "8s",
-        aspectRatio: "16:9",
-      });
-    }
-
-    // Case 2: SDK returns a file handle (e.g., "files/abc123")
-    const handle = (typeof videoObj === "string") ? videoObj
-                 : (videoObj && videoObj.name ? videoObj.name : null);
-    if (handle) {
-      return res.json({
-        success: true,
-        model: "veo-3.0-fast-generate-preview",
-        file: handle,             // <-- your /download route will use this
-        duration: "8s",
-        aspectRatio: "16:9",
-      });
-    }
-
-    // Neither shape present
-    console.error("[Veo3] unexpected op.response:", JSON.stringify(op.response || {}, null, 2));
-    throw new Error("No downloadable file reference returned");
-  } catch (err) {
-    console.error("[Veo3] error:", err);
-    res.status(500).json({ error: err.message || "Failed to generate video with Veo 3" });
-  }
 });
 
 // ===================== Secure download proxy =====================
@@ -551,54 +505,54 @@ app.get("/api/veo/video/download", async (req, res) => {
     const { file } = req.query;
     if (!file) return res.status(400).json({ error: "Missing file parameter" });
     if (!googleVeoAI) return res.status(500).json({ error: "Google Veo AI not initialized" });
-  
+
     // Make sure we have just the file handle string (like "files/abc123")
     const fileHandle = String(file);
-  
+
     // Prepare a temp file path
     const tmpDir = os.tmpdir();
     const safeBase = (fileHandle.split("/").pop() || "veo.mp4").replace(/[^\w.-]/g, "_");
     const tmpPath = path.join(tmpDir, `${Date.now()}_${safeBase}`);
-  
+
     try {
-      // 1) Download to disk. SDK resolves when the file is fully written.
-      await googleVeoAI.files.download({
-        file: fileHandle,
-        downloadPath: tmpPath,
-      });
-  
-      // 2) Verify the file is really there and non-empty
-      const st = await fs.promises.stat(tmpPath).catch(() => null);
-      if (!st || !st.isFile() || st.size === 0) {
-        throw new Error(`Downloaded file missing or empty at ${tmpPath}`);
-      }
-  
-      // 3) Stream to client, then cleanup
-      res.setHeader("Content-Type", "video/mp4");
-      // Optional inline filename
-      res.setHeader("Content-Disposition", `inline; filename="${safeBase}"`);
-  
-      const stream = fs.createReadStream(tmpPath);
-      stream.on("error", (err) => {
-        console.error("[Veo3] read stream error:", err);
-        if (!res.headersSent) res.status(500).json({ error: "Failed to read downloaded video" });
-        // Cleanup on error
-        fs.promises.unlink(tmpPath).catch(() => {});
-      });
-      res.on("close", () => {
-        // Client closed early; cleanup
-        fs.promises.unlink(tmpPath).catch(() => {});
-      });
-      stream.pipe(res).on("finish", () => {
-        fs.promises.unlink(tmpPath).catch(() => {});
-      });
+        // 1) Download to disk. SDK resolves when the file is fully written.
+        await googleVeoAI.files.download({
+            file: fileHandle,
+            downloadPath: tmpPath,
+        });
+
+        // 2) Verify the file is really there and non-empty
+        const st = await fs.promises.stat(tmpPath).catch(() => null);
+        if (!st || !st.isFile() || st.size === 0) {
+            throw new Error(`Downloaded file missing or empty at ${tmpPath}`);
+        }
+
+        // 3) Stream to client, then cleanup
+        res.setHeader("Content-Type", "video/mp4");
+        // Optional inline filename
+        res.setHeader("Content-Disposition", `inline; filename="${safeBase}"`);
+
+        const stream = fs.createReadStream(tmpPath);
+        stream.on("error", (err) => {
+            console.error("[Veo3] read stream error:", err);
+            if (!res.headersSent) res.status(500).json({ error: "Failed to read downloaded video" });
+            // Cleanup on error
+            fs.promises.unlink(tmpPath).catch(() => { });
+        });
+        res.on("close", () => {
+            // Client closed early; cleanup
+            fs.promises.unlink(tmpPath).catch(() => { });
+        });
+        stream.pipe(res).on("finish", () => {
+            fs.promises.unlink(tmpPath).catch(() => { });
+        });
     } catch (err) {
-      console.error("[Veo3] download/serve error:", err);
-      // Attempt cleanup if the file exists
-      fs.promises.unlink(tmpPath).catch(() => {});
-      res.status(500).json({ error: err.message || "Failed to download video" });
+        console.error("[Veo3] download/serve error:", err);
+        // Attempt cleanup if the file exists
+        fs.promises.unlink(tmpPath).catch(() => { });
+        res.status(500).json({ error: err.message || "Failed to download video" });
     }
-  });
+});
 
 
 // ===================== Video Caption =====================
