@@ -27,22 +27,19 @@
 
   <div class="container">
     <div class="gallery-header">
-      <h1>Image Gallery</h1>
-      <p>Browse all your generated images from Supabase storage</p>
       <div class="gallery-controls">
         <div class="custom-dropdown">
-          <div class="dropdown-trigger" id="dropdownTrigger">
-            <span class="dropdown-label" id="dropdownLabel">All Models</span>
+          <div class="dropdown-trigger" id="modelDropdownTrigger">
+            <span class="dropdown-label" id="modelDropdownLabel">All Models</span>
             <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="6,9 12,15 18,9"></polyline>
             </svg>
           </div>
-          <div class="dropdown-menu" id="dropdownMenu">
+          <div class="dropdown-menu" id="modelDropdownMenu">
             <div class="dropdown-header">
-              <span>Select Models</span>
               <div class="dropdown-actions">
-                <button id="selectAllBtn" class="action-btn">All</button>
-                <button id="clearAllBtn" class="action-btn">Clear</button>
+                <button id="selectAllModelsBtn" class="action-btn">All</button>
+                <button id="clearAllModelsBtn" class="action-btn">Clear</button>
               </div>
             </div>
             <div class="dropdown-options">
@@ -69,6 +66,27 @@
             </div>
           </div>
         </div>
+        
+        <div class="custom-dropdown">
+          <div class="dropdown-trigger" id="tagDropdownTrigger">
+            <span class="dropdown-label" id="tagDropdownLabel">All Tags</span>
+            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+          </div>
+          <div class="dropdown-menu" id="tagDropdownMenu">
+            <div class="dropdown-header">
+              <div class="dropdown-actions">
+                <button id="selectAllTagsBtn" class="action-btn">All</button>
+                <button id="clearAllTagsBtn" class="action-btn">Clear</button>
+              </div>
+            </div>
+            <div class="dropdown-options" id="tagDropdownOptions">
+              <!-- Tag options will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+        
         <div class="view-toggle">
           <button id="gridViewBtn" class="view-btn active">Grid</button>
           <button id="listViewBtn" class="view-btn">List</button>

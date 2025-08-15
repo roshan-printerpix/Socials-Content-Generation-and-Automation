@@ -5,12 +5,13 @@ class Gallery {
         this.filteredImages = [];
         this.currentView = 'grid';
         this.selectedModels = ['imagen-3', 'imagen-4', 'imagen-4-ultra', 'veo-3']; // Show all by default
+        this.selectedTags = []; // Show all by default (empty array means no tag filter)
         this.selectedImage = null;
         this.availableTags = [];
         
         this.initElements();
         this.initEventListeners();
-        this.initializeDropdown();
+        this.initializeDropdowns();
         this.loadTags();
         this.loadGallery();
     }
@@ -29,13 +30,21 @@ class Gallery {
         this.listViewBtn = document.getElementById('listViewBtn');
         this.retryBtn = document.getElementById('retryBtn');
         
-        // Custom dropdown elements
-        this.dropdownTrigger = document.getElementById('dropdownTrigger');
-        this.dropdownLabel = document.getElementById('dropdownLabel');
-        this.dropdownMenu = document.getElementById('dropdownMenu');
-        this.selectAllBtn = document.getElementById('selectAllBtn');
-        this.clearAllBtn = document.getElementById('clearAllBtn');
-        this.checkboxes = document.querySelectorAll('.dropdown-option input[type="checkbox"]');
+        // Model dropdown elements
+        this.modelDropdownTrigger = document.getElementById('modelDropdownTrigger');
+        this.modelDropdownLabel = document.getElementById('modelDropdownLabel');
+        this.modelDropdownMenu = document.getElementById('modelDropdownMenu');
+        this.selectAllModelsBtn = document.getElementById('selectAllModelsBtn');
+        this.clearAllModelsBtn = document.getElementById('clearAllModelsBtn');
+        this.modelCheckboxes = document.querySelectorAll('#modelDropdownMenu .dropdown-option input[type="checkbox"]');
+        
+        // Tag dropdown elements
+        this.tagDropdownTrigger = document.getElementById('tagDropdownTrigger');
+        this.tagDropdownLabel = document.getElementById('tagDropdownLabel');
+        this.tagDropdownMenu = document.getElementById('tagDropdownMenu');
+        this.selectAllTagsBtn = document.getElementById('selectAllTagsBtn');
+        this.clearAllTagsBtn = document.getElementById('clearAllTagsBtn');
+        this.tagDropdownOptions = document.getElementById('tagDropdownOptions');
         
         this.imageModal = document.getElementById('imageModal');
         this.modalClose = document.getElementById('modalClose');
@@ -58,20 +67,28 @@ class Gallery {
         this.gridViewBtn.addEventListener('click', () => this.setView('grid'));
         this.listViewBtn.addEventListener('click', () => this.setView('list'));
         
-        // Custom dropdown event listeners
-        this.dropdownTrigger.addEventListener('click', () => this.toggleDropdown());
-        this.selectAllBtn.addEventListener('click', () => this.selectAllModels());
-        this.clearAllBtn.addEventListener('click', () => this.clearAllModels());
+        // Model dropdown event listeners
+        this.modelDropdownTrigger.addEventListener('click', () => this.toggleModelDropdown());
+        this.selectAllModelsBtn.addEventListener('click', () => this.selectAllModels());
+        this.clearAllModelsBtn.addEventListener('click', () => this.clearAllModels());
         
-        // Checkbox change listeners
-        this.checkboxes.forEach(checkbox => {
+        // Model checkbox change listeners
+        this.modelCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', () => this.updateSelectedModels());
         });
         
-        // Close dropdown when clicking outside
+        // Tag dropdown event listeners
+        this.tagDropdownTrigger.addEventListener('click', () => this.toggleTagDropdown());
+        this.selectAllTagsBtn.addEventListener('click', () => this.selectAllTags());
+        this.clearAllTagsBtn.addEventListener('click', () => this.clearAllTags());
+        
+        // Close dropdowns when clicking outside
         document.addEventListener('click', (e) => {
-            if (!this.dropdownTrigger.contains(e.target) && !this.dropdownMenu.contains(e.target)) {
-                this.closeDropdown();
+            if (!this.modelDropdownTrigger.contains(e.target) && !this.modelDropdownMenu.contains(e.target)) {
+                this.closeModelDropdown();
+            }
+            if (!this.tagDropdownTrigger.contains(e.target) && !this.tagDropdownMenu.contains(e.target)) {
+                this.closeTagDropdown();
             }
         });
         
@@ -94,8 +111,10 @@ class Gallery {
             if (e.key === 'Escape') {
                 if (this.imageModal.style.display !== 'none') {
                     this.closeModal();
-                } else if (this.dropdownMenu.classList.contains('show')) {
-                    this.closeDropdown();
+                } else if (this.modelDropdownMenu.classList.contains('show')) {
+                    this.closeModelDropdown();
+                } else if (this.tagDropdownMenu.classList.contains('show')) {
+                    this.closeTagDropdown();
                 }
             }
         });
@@ -283,83 +302,17 @@ class Gallery {
         this.galleryGrid.classList.toggle('list-view', view === 'list');
     }
 
-    toggleDropdown() {
-        const isOpen = this.dropdownMenu.classList.contains('show');
-        if (isOpen) {
-            this.closeDropdown();
-        } else {
-            this.openDropdown();
-        }
-    }
 
-    openDropdown() {
-        this.dropdownTrigger.classList.add('active');
-        this.dropdownMenu.classList.add('show');
-    }
 
-    closeDropdown() {
-        this.dropdownTrigger.classList.remove('active');
-        this.dropdownMenu.classList.remove('show');
-    }
-
-    updateSelectedModels() {
-        // Get selected models from checkboxes
-        this.selectedModels = Array.from(this.checkboxes)
-            .filter(checkbox => checkbox.checked)
-            .map(checkbox => checkbox.value);
-        
-        // Update dropdown label
-        this.updateDropdownLabel();
-        
-        // Apply filter and re-render
-        this.applyFilter();
-        this.renderFilteredGallery();
-    }
-
-    updateDropdownLabel() {
-        const selectedCount = this.selectedModels.length;
-        const totalCount = this.checkboxes.length;
-        
-        if (selectedCount === 0) {
-            this.dropdownLabel.textContent = 'No Models Selected';
-        } else if (selectedCount === totalCount) {
-            this.dropdownLabel.textContent = 'All Models';
-        } else if (selectedCount === 1) {
-            const modelName = this.formatModelName(this.selectedModels[0]);
-            this.dropdownLabel.textContent = modelName;
-        } else {
-            this.dropdownLabel.textContent = `${selectedCount} Models Selected`;
-        }
-    }
-
-    selectAllModels() {
-        // Check all checkboxes
-        this.checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-        });
-        
-        // Update selected models and apply filter
-        this.updateSelectedModels();
-    }
-
-    clearAllModels() {
-        // Uncheck all checkboxes
-        this.checkboxes.forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        
-        // Update selected models and apply filter
-        this.updateSelectedModels();
-    }
-
-    initializeDropdown() {
+    initializeDropdowns() {
         // Set initial checkbox states based on selectedModels
-        this.checkboxes.forEach(checkbox => {
+        this.modelCheckboxes.forEach(checkbox => {
             checkbox.checked = this.selectedModels.includes(checkbox.value);
         });
         
-        // Update the dropdown label
-        this.updateDropdownLabel();
+        // Update the dropdown labels
+        this.updateModelDropdownLabel();
+        this.updateTagDropdownLabel();
     }
 
     applyFilter() {
@@ -368,9 +321,24 @@ class Gallery {
             this.filteredImages = [];
         } else {
             // Filter images based on selected models
-            this.filteredImages = this.images.filter(image => 
+            let filtered = this.images.filter(image => 
                 this.selectedModels.includes(image.model)
             );
+            
+            // Apply tag filter if tags are selected
+            if (this.selectedTags.length > 0) {
+                filtered = filtered.filter(image => {
+                    if (!image.tags || image.tags.length === 0) {
+                        return false; // Image has no tags, exclude it
+                    }
+                    
+                    // Check if image has any of the selected tags
+                    const imageTagIds = image.tags.map(tag => tag.id);
+                    return this.selectedTags.some(tagId => imageTagIds.includes(tagId));
+                });
+            }
+            
+            this.filteredImages = filtered;
         }
         
         // Update stats to reflect filtered images
@@ -519,6 +487,177 @@ class Gallery {
         return modelMap[model] || model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 
+    // Tag dropdown methods
+    toggleTagDropdown() {
+        const isOpen = this.tagDropdownMenu.classList.contains('show');
+        if (isOpen) {
+            this.closeTagDropdown();
+        } else {
+            this.openTagDropdown();
+        }
+    }
+
+    openTagDropdown() {
+        this.tagDropdownTrigger.classList.add('active');
+        this.tagDropdownMenu.classList.add('show');
+    }
+
+    closeTagDropdown() {
+        this.tagDropdownTrigger.classList.remove('active');
+        this.tagDropdownMenu.classList.remove('show');
+    }
+
+    toggleModelDropdown() {
+        const isOpen = this.modelDropdownMenu.classList.contains('show');
+        if (isOpen) {
+            this.closeModelDropdown();
+        } else {
+            this.openModelDropdown();
+        }
+    }
+
+    openModelDropdown() {
+        this.modelDropdownTrigger.classList.add('active');
+        this.modelDropdownMenu.classList.add('show');
+    }
+
+    closeModelDropdown() {
+        this.modelDropdownTrigger.classList.remove('active');
+        this.modelDropdownMenu.classList.remove('show');
+    }
+
+    updateSelectedModels() {
+        // Get selected models from checkboxes
+        this.selectedModels = Array.from(this.modelCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+        
+        // Update dropdown label
+        this.updateModelDropdownLabel();
+        
+        // Apply filter and re-render
+        this.applyFilter();
+        this.renderFilteredGallery();
+    }
+
+    updateModelDropdownLabel() {
+        const selectedCount = this.selectedModels.length;
+        const totalCount = this.modelCheckboxes.length;
+        
+        if (selectedCount === 0) {
+            this.modelDropdownLabel.textContent = 'No Models Selected';
+        } else if (selectedCount === totalCount) {
+            this.modelDropdownLabel.textContent = 'All Models';
+        } else if (selectedCount === 1) {
+            const modelName = this.formatModelName(this.selectedModels[0]);
+            this.modelDropdownLabel.textContent = modelName;
+        } else {
+            this.modelDropdownLabel.textContent = `${selectedCount} Models Selected`;
+        }
+    }
+
+    selectAllModels() {
+        // Check all checkboxes
+        this.modelCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        
+        // Update selected models and apply filter
+        this.updateSelectedModels();
+    }
+
+    clearAllModels() {
+        // Uncheck all checkboxes
+        this.modelCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Update selected models and apply filter
+        this.updateSelectedModels();
+    }
+
+    updateSelectedTags() {
+        // Get selected tags from checkboxes
+        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        this.selectedTags = Array.from(tagCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => parseInt(checkbox.value));
+        
+        // Update dropdown label
+        this.updateTagDropdownLabel();
+        
+        // Apply filter and re-render
+        this.applyFilter();
+        this.renderFilteredGallery();
+    }
+
+    updateTagDropdownLabel() {
+        const selectedCount = this.selectedTags.length;
+        const totalCount = this.availableTags.length;
+        
+        if (selectedCount === 0) {
+            this.tagDropdownLabel.textContent = 'All Tags';
+        } else if (selectedCount === totalCount) {
+            this.tagDropdownLabel.textContent = 'All Tags';
+        } else if (selectedCount === 1) {
+            const tag = this.availableTags.find(t => t.id === this.selectedTags[0]);
+            this.tagDropdownLabel.textContent = tag ? tag.display_name : 'Unknown Tag';
+        } else {
+            this.tagDropdownLabel.textContent = `${selectedCount} Tags Selected`;
+        }
+    }
+
+    selectAllTags() {
+        // Check all tag checkboxes
+        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        tagCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        
+        // Update selected tags and apply filter
+        this.updateSelectedTags();
+    }
+
+    clearAllTags() {
+        // Uncheck all tag checkboxes
+        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        tagCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Update selected tags and apply filter
+        this.updateSelectedTags();
+    }
+
+    populateTagDropdown() {
+        // Clear existing options
+        this.tagDropdownOptions.innerHTML = '';
+        
+        // Add available tags as options
+        this.availableTags.forEach(tag => {
+            const label = document.createElement('label');
+            label.className = 'dropdown-option';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = tag.id;
+            checkbox.addEventListener('change', () => this.updateSelectedTags());
+            
+            const checkmark = document.createElement('span');
+            checkmark.className = 'checkmark';
+            
+            const optionText = document.createElement('span');
+            optionText.className = 'option-text';
+            optionText.textContent = tag.display_name;
+            
+            label.appendChild(checkbox);
+            label.appendChild(checkmark);
+            label.appendChild(optionText);
+            
+            this.tagDropdownOptions.appendChild(label);
+        });
+    }
+
     // Tag Management Methods
     async loadTags() {
         try {
@@ -530,6 +669,7 @@ class Gallery {
             const data = await response.json();
             this.availableTags = data.tags || [];
             this.populateTagSelect();
+            this.populateTagDropdown();
             
         } catch (error) {
             console.error('Error loading tags:', error);
