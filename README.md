@@ -18,7 +18,6 @@ A comprehensive web application that generates marketing images and videos using
 
 ### Instagram Integration
 - **Direct Posting**: Post selected images and videos directly to Instagram
-- **Cloudinary Integration**: Automatic image processing and cloud storage
 - **Meta Graph API**: Full Instagram Business API integration
 - **Post Management**: Track posting status and results
 
@@ -48,7 +47,7 @@ A comprehensive web application that generates marketing images and videos using
 - **Runway ML**: Alternative video generation
 
 ### Cloud Services
-- **Cloudinary**: Image/video storage and processing
+- **Supabase**: Database storage for generated content
 - **Meta Graph API**: Instagram posting integration
 
 ### Development Tools
@@ -81,10 +80,7 @@ A comprehensive web application that generates marketing images and videos using
    INSTAGRAM_ACCESS_TOKEN=your_instagram_access_token
    IG_USER_ID=your_instagram_business_account_id
    
-   # Cloudinary Configuration
-   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-   CLOUDINARY_API_KEY=your_cloudinary_api_key
-   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
    
    # Supabase Database (Optional)
    SUPABASE_URL=https://your-project.supabase.co
@@ -140,7 +136,7 @@ A comprehensive web application that generates marketing images and videos using
 ### AI Model Configuration
 - **OpenAI**: Requires API key for GPT-4o access
 - **Google Gemini**: Requires API key for Imagen and Veo model access
-- **Cloudinary**: Required for image/video storage and Instagram posting
+- **Supabase**: Database for storing generated content and post history
 
 ## 📁 Project Structure
 

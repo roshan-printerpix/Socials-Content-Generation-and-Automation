@@ -59,7 +59,7 @@ Stores Instagram posting history:
 - `post_id`: Instagram post ID
 - `model`: AI model used for the image
 - `caption`: Posted caption
-- `image_url`: Cloudinary URL
+- `image_url`: Image URL or base64 data
 - `posted_at`: When posted to Instagram
 - `status`: Post status (published, failed)
 

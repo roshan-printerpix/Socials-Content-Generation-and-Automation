@@ -12,7 +12,6 @@ const app = express();
 const PORT = 3000;
 
 // --- External services
-const cloudinary = require('cloudinary').v2;
 const axios = require('axios');
 const promptManager = require('./utils/promptManager');
 const { saveGeneratedImage, getGeneratedImages, deleteGeneratedImage, saveInstagramPost } = require('./utils/supabase');
@@ -21,29 +20,10 @@ const { saveGeneratedImage, getGeneratedImages, deleteGeneratedImage, saveInstag
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // --- Google GenAI for Images
-let googleAI;
-try {
-    if (!process.env.GEMINI_API_KEY) {
-        throw new Error('GEMINI_API_KEY is not set in environment variables');
-    }
-    googleAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-} catch (error) {
-    console.error('Failed to initialize Google GenAI (Images):', error.message);
-    googleAI = null;
-}
+const googleAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // --- Google GenAI for Videos (Veo)
-let googleVeoAI;
-try {
-    if (!process.env.GEMINI_VEO_API_KEY) {
-        throw new Error('GEMINI_VEO_API_KEY is not set in environment variables');
-    }
-    googleVeoAI = new GoogleGenAI({ apiKey: process.env.GEMINI_VEO_API_KEY });
-} catch (error) {
-    console.error('Failed to initialize Google Veo AI (Videos):', error.message);
-    googleVeoAI = null;
-}
-
+const googleVeoAI = new GoogleGenAI({ apiKey: process.env.GEMINI_VEO_API_KEY });
 
 // --- Uploads
 const upload = multer({
@@ -55,12 +35,7 @@ const upload = multer({
 app.use(cors());
 app.use(express.json());
 
-// --- Cloudinary config
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
+
 
 // --- Static + pages
 app.use(express.static('.'));
@@ -71,6 +46,10 @@ app.get('/', (req, res) => {
 
 app.get('/videos.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'videos.html'));
+});
+
+app.get('/gallery.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'gallery.html'));
 });
 
 // ===================== Imagen =====================
@@ -339,16 +318,10 @@ app.post('/api/instagram/post', upload.single('image'), async (req, res) => {
 
         console.log(`Posting to Instagram with model: ${model}`);
 
-        // Upload to Cloudinary
+        // Convert image to base64 data URL for Instagram API
         const base64Image = `data:image/png;base64,${imageFile.buffer.toString('base64')}`;
-        const cloudinaryRes = await cloudinary.uploader.upload(base64Image, {
-            folder: 'ai-instagram-posts',
-            public_id: `post_${Date.now()}`,
-            resource_type: 'image'
-        });
-
-        const imageUrl = cloudinaryRes.secure_url;
-        console.log('✅ Uploaded to Cloudinary:', imageUrl);
+        const imageUrl = base64Image;
+        console.log('✅ Image prepared for Instagram posting');
 
         // Instagram Graph API
         const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
@@ -376,7 +349,6 @@ app.post('/api/instagram/post', upload.single('image'), async (req, res) => {
             model: model,
             caption: caption,
             image_url: imageUrl,
-            cloudinary_url: imageUrl,
             caption_length: caption.length,
             posted_at: new Date().toISOString(),
             status: 'published'
@@ -695,6 +667,239 @@ app.delete('/api/generated-images/:id', async (req, res) => {
         }
     } catch (error) {
         console.error('Error deleting image:', error);
+        res.status(500).json({ error: 'Failed to delete image' });
+    }
+});
+
+// ===================== Gallery API Endpoints =====================
+
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
+    res.json({ message: 'Server is working!', timestamp: new Date().toISOString() });
+});
+
+// Debug endpoint to test Supabase connection
+app.get('/api/gallery/debug', async (req, res) => {
+    try {
+        const { createClient } = require('@supabase/supabase-js');
+        
+        console.log('Debug: Checking Supabase configuration...');
+        console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'Present' : 'Missing');
+        console.log('SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? 'Present' : 'Missing');
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+            return res.status(500).json({ error: 'Supabase configuration missing' });
+        }
+
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        console.log('Debug: Testing storage bucket access...');
+        
+        // Test basic bucket access
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        
+        if (bucketsError) {
+            console.error('Debug: Buckets error:', bucketsError);
+            return res.json({ 
+                error: 'Failed to list buckets', 
+                details: bucketsError,
+                step: 'listBuckets'
+            });
+        }
+        
+        console.log('Debug: Available buckets:', buckets.map(b => b.name));
+        
+        // Test generated-images bucket specifically
+        const { data: rootFiles, error: rootError } = await supabase.storage
+            .from('generated-images')
+            .list('', { limit: 10 });
+            
+        if (rootError) {
+            console.error('Debug: Root files error:', rootError);
+            return res.json({ 
+                error: 'Failed to access generated-images bucket', 
+                details: rootError,
+                step: 'listRootFiles',
+                buckets: buckets.map(b => b.name)
+            });
+        }
+        
+        console.log('Debug: Root files/folders:', rootFiles.map(f => f.name));
+        
+        res.json({ 
+            success: true, 
+            buckets: buckets.map(b => b.name),
+            rootItems: rootFiles.map(f => ({ name: f.name, id: f.id })),
+            message: 'Supabase connection successful'
+        });
+        
+    } catch (error) {
+        console.error('Debug: Exception:', error);
+        res.status(500).json({ error: error.message, step: 'exception' });
+    }
+});
+
+app.get('/api/gallery/images', async (req, res) => {
+    try {
+        console.log('Gallery API: Starting request...');
+        
+        const { createClient } = require('@supabase/supabase-js');
+        
+        console.log('Gallery API: Checking environment variables...');
+        console.log('SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
+        console.log('SUPABASE_ANON_KEY exists:', !!process.env.SUPABASE_ANON_KEY);
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+            console.log('Gallery API: Missing Supabase configuration');
+            return res.status(500).json({ error: 'Supabase configuration missing' });
+        }
+
+        console.log('Gallery API: Creating Supabase client...');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        console.log('Gallery API: Testing basic storage access...');
+        
+        // Simple test - just try to list the root of the bucket
+        const { data: rootItems, error: rootError } = await supabase.storage
+            .from('generated-images')
+            .list('', { limit: 10 });
+
+        if (rootError) {
+            console.error('Gallery API: Root access error:', rootError);
+            return res.status(500).json({ 
+                error: 'Failed to access storage bucket', 
+                details: rootError.message,
+                code: rootError.statusCode 
+            });
+        }
+
+        console.log('Gallery API: Root items found:', rootItems?.length || 0);
+        console.log('Gallery API: Root item names:', rootItems?.map(item => item.name) || []);
+
+        // Get images from all model folders
+        const images = [];
+        
+        if (rootItems && rootItems.length > 0) {
+            // Find all model folders (imagen-3, imagen-4, imagen-4-ultra, veo-3, etc.)
+            const modelFolders = rootItems.filter(item => 
+                item.name && 
+                !item.name.includes('.emptyFolderPlaceholder') &&
+                (item.name.startsWith('imagen-') || item.name.startsWith('veo-'))
+            );
+            
+            console.log(`Gallery API: Found ${modelFolders.length} model folders:`, modelFolders.map(f => f.name));
+            
+            // Process each model folder
+            for (const folder of modelFolders) {
+                try {
+                    console.log(`Gallery API: Processing folder: ${folder.name}`);
+                    
+                    const { data: folderFiles, error: folderError } = await supabase.storage
+                        .from('generated-images')
+                        .list(folder.name, { 
+                            limit: 1000,  // Get up to 1000 images per folder
+                            sortBy: { column: 'created_at', order: 'desc' }
+                        });
+                    
+                    if (folderError) {
+                        console.error(`Gallery API: Error accessing folder ${folder.name}:`, folderError);
+                        continue;
+                    }
+                    
+                    console.log(`Gallery API: Found ${folderFiles?.length || 0} files in ${folder.name}`);
+                    
+                    // Process files from this folder
+                    if (folderFiles && folderFiles.length > 0) {
+                        const folderImages = folderFiles
+                            .filter(file => file.name && !file.name.includes('.emptyFolderPlaceholder'))
+                            .map(file => {
+                                const filePath = `${folder.name}/${file.name}`;
+                                const { data: urlData } = supabase.storage
+                                    .from('generated-images')
+                                    .getPublicUrl(filePath);
+
+                                return {
+                                    name: file.name,
+                                    path: filePath,
+                                    url: urlData.publicUrl,
+                                    size: file.metadata?.size || 0,
+                                    created_at: file.created_at,
+                                    updated_at: file.updated_at,
+                                    model: folder.name,
+                                    id: `${folder.name}-${file.name}`
+                                };
+                            });
+                        
+                        images.push(...folderImages);
+                        console.log(`Gallery API: Added ${folderImages.length} images from ${folder.name}`);
+                    }
+                } catch (folderError) {
+                    console.error(`Gallery API: Exception processing folder ${folder.name}:`, folderError);
+                }
+            }
+            
+            // Sort all images by creation date (newest first)
+            images.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+
+        console.log(`Gallery API: Returning ${images.length} images`);
+        res.json({ 
+            success: true, 
+            images, 
+            count: images.length,
+            debug: {
+                rootItemsFound: rootItems?.length || 0,
+                rootItemNames: rootItems?.map(item => item.name) || []
+            }
+        });
+
+    } catch (error) {
+        console.error('Gallery API: Exception:', error);
+        res.status(500).json({ 
+            error: 'Failed to load gallery', 
+            details: error.message,
+            stack: error.stack 
+        });
+    }
+});
+
+app.delete('/api/gallery/images/:filename', async (req, res) => {
+    try {
+        const { filename } = req.params;
+        
+        if (!filename) {
+            return res.status(400).json({ error: 'Filename is required' });
+        }
+
+        const { createClient } = require('@supabase/supabase-js');
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+            return res.status(500).json({ error: 'Supabase configuration missing' });
+        }
+
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        // The filename parameter should be the full path (e.g., "imagen-3/2025-08-13T14-06-20-447...")
+        // Decode it in case it was URL encoded
+        const filePath = decodeURIComponent(filename);
+        
+        console.log(`Deleting image from storage: ${filePath}`);
+        
+        // Delete the file from storage
+        const { error } = await supabase.storage
+            .from('generated-images')
+            .remove([filePath]);
+
+        if (error) {
+            console.error('Supabase delete error:', error);
+            return res.status(500).json({ error: 'Failed to delete image from storage' });
+        }
+
+        console.log(`Successfully deleted image: ${filePath}`);
+        res.json({ success: true, message: 'Image deleted successfully' });
+
+    } catch (error) {
+        console.error('Gallery delete error:', error);
         res.status(500).json({ error: 'Failed to delete image' });
     }
 });

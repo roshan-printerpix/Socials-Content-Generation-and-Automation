@@ -23,7 +23,7 @@ Printerpix AI Studio is a full-stack web application designed to generate market
 - **Backend**: Node.js, Express.js
 - **Frontend**: Vanilla JavaScript, HTML5, CSS3
 - **AI Services**: OpenAI GPT-4o, Google Gemini (Imagen & Veo)
-- **Cloud Services**: Cloudinary, Meta Graph API
+- **Cloud Services**: Supabase, Meta Graph API
 - **Development**: Git integration, file-based configuration
 
 ## 🏗️ Architecture & Design Patterns
@@ -38,7 +38,7 @@ Printerpix AI Studio is a full-stack web application designed to generate market
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   User Interface│    │   File System   │    │   Cloud Storage │
-│   Components    │    │   & Git         │    │   (Cloudinary)  │
+│   Components    │    │   & Git         │    │   (Supabase)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -111,7 +111,7 @@ printerpix-ai-studio/
 // Service Initialization
 - OpenAI client setup
 - Google GenAI initialization
-- Cloudinary configuration
+- Supabase configuration
 - Express middleware setup
 
 // Image Generation Endpoints
@@ -526,7 +526,7 @@ while (!operation.done) {
 User Input → Prompt Enhancement → Image Generation → Caption Generation → Instagram Posting
      ↓              ↓                    ↓                 ↓                ↓
 1. Basic prompt  2. GPT-4o         3. Imagen models   4. GPT-4o        5. Meta Graph API
-   validation       enhancement       (3 parallel)      captions         + Cloudinary
+   validation       enhancement       (3 parallel)      captions         + Supabase
 ```
 
 ### Video Generation Flow  
@@ -656,10 +656,9 @@ GEMINI_API_KEY=AIzaSy...
 INSTAGRAM_ACCESS_TOKEN=EAAB...
 IG_USER_ID=1784...
 
-# Required for image/video storage
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=123456789
-CLOUDINARY_API_SECRET=your_secret
+# Required for database storage
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Optional: Port configuration
 PORT=3000
