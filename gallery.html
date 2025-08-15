@@ -30,7 +30,45 @@
       <h1>Image Gallery</h1>
       <p>Browse all your generated images from Supabase storage</p>
       <div class="gallery-controls">
-        <button id="refreshBtn" class="refresh-btn">Refresh Gallery</button>
+        <div class="custom-dropdown">
+          <div class="dropdown-trigger" id="dropdownTrigger">
+            <span class="dropdown-label" id="dropdownLabel">All Models</span>
+            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+          </div>
+          <div class="dropdown-menu" id="dropdownMenu">
+            <div class="dropdown-header">
+              <span>Select Models</span>
+              <div class="dropdown-actions">
+                <button id="selectAllBtn" class="action-btn">All</button>
+                <button id="clearAllBtn" class="action-btn">Clear</button>
+              </div>
+            </div>
+            <div class="dropdown-options">
+              <label class="dropdown-option">
+                <input type="checkbox" value="imagen-3" checked>
+                <span class="checkmark"></span>
+                <span class="option-text">Imagen 3</span>
+              </label>
+              <label class="dropdown-option">
+                <input type="checkbox" value="imagen-4" checked>
+                <span class="checkmark"></span>
+                <span class="option-text">Imagen 4</span>
+              </label>
+              <label class="dropdown-option">
+                <input type="checkbox" value="imagen-4-ultra" checked>
+                <span class="checkmark"></span>
+                <span class="option-text">Imagen 4 Ultra</span>
+              </label>
+              <label class="dropdown-option">
+                <input type="checkbox" value="veo-3" checked>
+                <span class="checkmark"></span>
+                <span class="option-text">Veo 3</span>
+              </label>
+            </div>
+          </div>
+        </div>
         <div class="view-toggle">
           <button id="gridViewBtn" class="view-btn active">Grid</button>
           <button id="listViewBtn" class="view-btn">List</button>
@@ -94,6 +132,20 @@
             <span class="detail-value" id="modalCreated">-</span>
           </div>
         </div>
+        
+        <div class="modal-tags-section">
+          <h4>Product Tags</h4>
+          <div class="current-tags" id="currentTags">
+            <!-- Current tags will be displayed here -->
+          </div>
+          <div class="add-tags-section">
+            <select id="tagSelect" class="tag-select">
+              <option value="">Add a tag...</option>
+            </select>
+            <button id="addTagBtn" class="add-tag-btn">Add</button>
+          </div>
+        </div>
+        
         <div class="modal-actions">
           <button id="downloadBtn" class="action-btn download-btn">Download</button>
           <button id="deleteBtn" class="action-btn delete-btn">Delete</button>

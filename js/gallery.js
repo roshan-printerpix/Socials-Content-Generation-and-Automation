@@ -2,11 +2,16 @@
 class Gallery {
     constructor() {
         this.images = [];
+        this.filteredImages = [];
         this.currentView = 'grid';
+        this.selectedModels = ['imagen-3', 'imagen-4', 'imagen-4-ultra', 'veo-3']; // Show all by default
         this.selectedImage = null;
+        this.availableTags = [];
         
         this.initElements();
         this.initEventListeners();
+        this.initializeDropdown();
+        this.loadTags();
         this.loadGallery();
     }
 
@@ -20,10 +25,17 @@ class Gallery {
         this.totalImagesEl = document.getElementById('totalImages');
         this.totalSizeEl = document.getElementById('totalSize');
         
-        this.refreshBtn = document.getElementById('refreshBtn');
         this.gridViewBtn = document.getElementById('gridViewBtn');
         this.listViewBtn = document.getElementById('listViewBtn');
         this.retryBtn = document.getElementById('retryBtn');
+        
+        // Custom dropdown elements
+        this.dropdownTrigger = document.getElementById('dropdownTrigger');
+        this.dropdownLabel = document.getElementById('dropdownLabel');
+        this.dropdownMenu = document.getElementById('dropdownMenu');
+        this.selectAllBtn = document.getElementById('selectAllBtn');
+        this.clearAllBtn = document.getElementById('clearAllBtn');
+        this.checkboxes = document.querySelectorAll('.dropdown-option input[type="checkbox"]');
         
         this.imageModal = document.getElementById('imageModal');
         this.modalClose = document.getElementById('modalClose');
@@ -33,14 +45,35 @@ class Gallery {
         this.modalCreated = document.getElementById('modalCreated');
         this.downloadBtn = document.getElementById('downloadBtn');
         this.deleteBtn = document.getElementById('deleteBtn');
+        
+        // Tag management elements
+        this.currentTags = document.getElementById('currentTags');
+        this.tagSelect = document.getElementById('tagSelect');
+        this.addTagBtn = document.getElementById('addTagBtn');
     }
 
     initEventListeners() {
-        this.refreshBtn.addEventListener('click', () => this.loadGallery());
         this.retryBtn.addEventListener('click', () => this.loadGallery());
         
         this.gridViewBtn.addEventListener('click', () => this.setView('grid'));
         this.listViewBtn.addEventListener('click', () => this.setView('list'));
+        
+        // Custom dropdown event listeners
+        this.dropdownTrigger.addEventListener('click', () => this.toggleDropdown());
+        this.selectAllBtn.addEventListener('click', () => this.selectAllModels());
+        this.clearAllBtn.addEventListener('click', () => this.clearAllModels());
+        
+        // Checkbox change listeners
+        this.checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => this.updateSelectedModels());
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!this.dropdownTrigger.contains(e.target) && !this.dropdownMenu.contains(e.target)) {
+                this.closeDropdown();
+            }
+        });
         
         this.modalClose.addEventListener('click', () => this.closeModal());
         this.imageModal.addEventListener('click', (e) => {
@@ -50,10 +83,20 @@ class Gallery {
         this.downloadBtn.addEventListener('click', () => this.downloadImage());
         this.deleteBtn.addEventListener('click', () => this.deleteImage());
         
+        // Tag management event listeners
+        this.addTagBtn.addEventListener('click', () => this.addTagToImage());
+        this.tagSelect.addEventListener('change', () => {
+            this.addTagBtn.disabled = !this.tagSelect.value;
+        });
+        
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.imageModal.style.display !== 'none') {
-                this.closeModal();
+            if (e.key === 'Escape') {
+                if (this.imageModal.style.display !== 'none') {
+                    this.closeModal();
+                } else if (this.dropdownMenu.classList.contains('show')) {
+                    this.closeDropdown();
+                }
             }
         });
     }
@@ -122,10 +165,21 @@ class Gallery {
             return;
         }
 
+        // Apply initial filter (show all by default)
+        this.applyFilter();
+        this.renderFilteredGallery();
+    }
+
+    renderFilteredGallery() {
+        if (this.filteredImages.length === 0) {
+            this.showEmpty();
+            return;
+        }
+
         this.showGallery();
         this.galleryGrid.innerHTML = '';
 
-        this.images.forEach((image, index) => {
+        this.filteredImages.forEach((image, index) => {
             const item = this.createGalleryItem(image, index);
             this.galleryGrid.appendChild(item);
         });
@@ -155,8 +209,39 @@ class Gallery {
         modelBadge.className = 'gallery-item-model-badge';
         modelBadge.textContent = this.formatModelName(image.model);
 
+        // Add tags display
+        const tagsContainer = document.createElement('div');
+        tagsContainer.className = 'gallery-item-tags';
+        
+        if (image.tags && image.tags.length > 0) {
+            // Show up to 3 tags on the gallery item
+            const displayTags = image.tags.slice(0, 3);
+            displayTags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.className = 'gallery-tag';
+                tagElement.textContent = tag.display_name;
+                
+                if (tag.color && tag.color !== '#e90b75') {
+                    tagElement.classList.add('colored');
+                    tagElement.style.backgroundColor = tag.color;
+                }
+                
+                tagsContainer.appendChild(tagElement);
+            });
+            
+            // Show "+X more" if there are more than 3 tags
+            if (image.tags.length > 3) {
+                const moreTag = document.createElement('span');
+                moreTag.className = 'gallery-tag';
+                moreTag.textContent = `+${image.tags.length - 3} more`;
+                moreTag.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                tagsContainer.appendChild(moreTag);
+            }
+        }
+
         imageContainer.appendChild(img);
         imageContainer.appendChild(modelBadge);
+        imageContainer.appendChild(tagsContainer);
 
         const info = document.createElement('div');
         info.className = 'gallery-item-info';
@@ -198,6 +283,108 @@ class Gallery {
         this.galleryGrid.classList.toggle('list-view', view === 'list');
     }
 
+    toggleDropdown() {
+        const isOpen = this.dropdownMenu.classList.contains('show');
+        if (isOpen) {
+            this.closeDropdown();
+        } else {
+            this.openDropdown();
+        }
+    }
+
+    openDropdown() {
+        this.dropdownTrigger.classList.add('active');
+        this.dropdownMenu.classList.add('show');
+    }
+
+    closeDropdown() {
+        this.dropdownTrigger.classList.remove('active');
+        this.dropdownMenu.classList.remove('show');
+    }
+
+    updateSelectedModels() {
+        // Get selected models from checkboxes
+        this.selectedModels = Array.from(this.checkboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+        
+        // Update dropdown label
+        this.updateDropdownLabel();
+        
+        // Apply filter and re-render
+        this.applyFilter();
+        this.renderFilteredGallery();
+    }
+
+    updateDropdownLabel() {
+        const selectedCount = this.selectedModels.length;
+        const totalCount = this.checkboxes.length;
+        
+        if (selectedCount === 0) {
+            this.dropdownLabel.textContent = 'No Models Selected';
+        } else if (selectedCount === totalCount) {
+            this.dropdownLabel.textContent = 'All Models';
+        } else if (selectedCount === 1) {
+            const modelName = this.formatModelName(this.selectedModels[0]);
+            this.dropdownLabel.textContent = modelName;
+        } else {
+            this.dropdownLabel.textContent = `${selectedCount} Models Selected`;
+        }
+    }
+
+    selectAllModels() {
+        // Check all checkboxes
+        this.checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        
+        // Update selected models and apply filter
+        this.updateSelectedModels();
+    }
+
+    clearAllModels() {
+        // Uncheck all checkboxes
+        this.checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Update selected models and apply filter
+        this.updateSelectedModels();
+    }
+
+    initializeDropdown() {
+        // Set initial checkbox states based on selectedModels
+        this.checkboxes.forEach(checkbox => {
+            checkbox.checked = this.selectedModels.includes(checkbox.value);
+        });
+        
+        // Update the dropdown label
+        this.updateDropdownLabel();
+    }
+
+    applyFilter() {
+        if (this.selectedModels.length === 0) {
+            // If no models selected, show empty
+            this.filteredImages = [];
+        } else {
+            // Filter images based on selected models
+            this.filteredImages = this.images.filter(image => 
+                this.selectedModels.includes(image.model)
+            );
+        }
+        
+        // Update stats to reflect filtered images
+        this.updateFilteredStats();
+    }
+
+    updateFilteredStats() {
+        const totalImages = this.filteredImages.length;
+        const totalSize = this.filteredImages.reduce((sum, img) => sum + (img.size || 0), 0);
+        
+        this.totalImagesEl.textContent = totalImages.toLocaleString();
+        this.totalSizeEl.textContent = this.formatFileSize(totalSize);
+    }
+
     openModal(image, index) {
         this.selectedImage = { ...image, index };
         
@@ -211,6 +398,13 @@ class Gallery {
         if (modalTitle) {
             modalTitle.textContent = `${this.formatModelName(image.model)} - Image Details`;
         }
+        
+        // Display current tags
+        this.displayCurrentTags(image.tags || []);
+        
+        // Reset tag selection
+        this.tagSelect.value = '';
+        this.addTagBtn.disabled = true;
         
         this.imageModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -262,12 +456,17 @@ class Gallery {
                 throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
             }
             
-            // Remove from local array
-            this.images.splice(this.selectedImage.index, 1);
+            // Find and remove from main images array using the image ID
+            const imageId = this.selectedImage.id;
+            const mainIndex = this.images.findIndex(img => img.id === imageId);
+            if (mainIndex !== -1) {
+                this.images.splice(mainIndex, 1);
+            }
             
-            // Update display
+            // Update display with current filter
             this.updateStats();
-            this.renderGallery();
+            this.applyFilter();
+            this.renderFilteredGallery();
             this.closeModal();
             
             alert('Image deleted successfully.');
@@ -318,6 +517,163 @@ class Gallery {
         };
         
         return modelMap[model] || model.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    // Tag Management Methods
+    async loadTags() {
+        try {
+            const response = await fetch('/api/tags');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            this.availableTags = data.tags || [];
+            this.populateTagSelect();
+            
+        } catch (error) {
+            console.error('Error loading tags:', error);
+            this.availableTags = [];
+        }
+    }
+
+    populateTagSelect() {
+        // Clear existing options except the first one
+        this.tagSelect.innerHTML = '<option value="">Add a tag...</option>';
+        
+        // Add available tags as options
+        this.availableTags.forEach(tag => {
+            const option = document.createElement('option');
+            option.value = tag.id;
+            option.textContent = tag.display_name;
+            option.dataset.color = tag.color;
+            this.tagSelect.appendChild(option);
+        });
+    }
+
+    displayCurrentTags(tags) {
+        this.currentTags.innerHTML = '';
+        
+        if (!tags || tags.length === 0) {
+            const noTags = document.createElement('div');
+            noTags.className = 'no-tags';
+            noTags.textContent = 'No tags assigned';
+            this.currentTags.appendChild(noTags);
+            return;
+        }
+
+        tags.forEach(tag => {
+            const tagItem = document.createElement('div');
+            tagItem.className = 'tag-item';
+            
+            if (tag.color && tag.color !== '#e90b75') {
+                tagItem.classList.add('colored');
+                tagItem.style.backgroundColor = tag.color;
+            }
+
+            const tagText = document.createElement('span');
+            tagText.textContent = tag.display_name;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'tag-remove';
+            removeBtn.innerHTML = '×';
+            removeBtn.title = `Remove ${tag.display_name} tag`;
+            removeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeTagFromImage(tag.id);
+            });
+
+            tagItem.appendChild(tagText);
+            tagItem.appendChild(removeBtn);
+            this.currentTags.appendChild(tagItem);
+        });
+    }
+
+    async addTagToImage() {
+        if (!this.selectedImage || !this.tagSelect.value) return;
+
+        const tagId = this.tagSelect.value;
+        const imageId = this.selectedImage.dbId;
+
+        if (!imageId) {
+            alert('This image is not in the database yet. Tags can only be added to images that have been generated through the system.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/images/${imageId}/tags`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tagIds: [tagId] })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            // Refresh the image tags
+            await this.refreshImageTags();
+            
+            // Reset the select
+            this.tagSelect.value = '';
+            this.addTagBtn.disabled = true;
+
+        } catch (error) {
+            console.error('Error adding tag:', error);
+            alert(`Failed to add tag: ${error.message}`);
+        }
+    }
+
+    async removeTagFromImage(tagId) {
+        if (!this.selectedImage) return;
+
+        const imageId = this.selectedImage.dbId;
+        if (!imageId) return;
+
+        try {
+            const response = await fetch(`/api/images/${imageId}/tags/${tagId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            // Refresh the image tags
+            await this.refreshImageTags();
+
+        } catch (error) {
+            console.error('Error removing tag:', error);
+            alert(`Failed to remove tag: ${error.message}`);
+        }
+    }
+
+    async refreshImageTags() {
+        if (!this.selectedImage || !this.selectedImage.dbId) return;
+
+        try {
+            const response = await fetch(`/api/images/${this.selectedImage.dbId}/tags`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.selectedImage.tags = data.tags || [];
+            
+            // Update the display
+            this.displayCurrentTags(this.selectedImage.tags);
+            
+            // Update the main images array
+            const mainImageIndex = this.images.findIndex(img => img.id === this.selectedImage.id);
+            if (mainImageIndex !== -1) {
+                this.images[mainImageIndex].tags = this.selectedImage.tags;
+            }
+
+        } catch (error) {
+            console.error('Error refreshing image tags:', error);
+        }
     }
 }
 

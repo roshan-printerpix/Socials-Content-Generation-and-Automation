@@ -84,7 +84,12 @@ app.post('/api/imagen3', async (req, res) => {
         };
 
         // Save to database
-        await saveGeneratedImage(imageData);
+        const savedImage = await saveGeneratedImage(imageData);
+        
+        // Auto-tag the image based on prompt content
+        if (savedImage && savedImage.id) {
+            await autoTagImage(savedImage.id, prompt);
+        }
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -123,7 +128,12 @@ app.post('/api/imagen4', async (req, res) => {
         };
 
         // Save to database
-        await saveGeneratedImage(imageData);
+        const savedImage = await saveGeneratedImage(imageData);
+        
+        // Auto-tag the image based on prompt content
+        if (savedImage && savedImage.id) {
+            await autoTagImage(savedImage.id, prompt);
+        }
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -162,7 +172,12 @@ app.post('/api/imagen4ultra', async (req, res) => {
         };
 
         // Save to database
-        await saveGeneratedImage(imageData);
+        const savedImage = await saveGeneratedImage(imageData);
+        
+        // Auto-tag the image based on prompt content
+        if (savedImage && savedImage.id) {
+            await autoTagImage(savedImage.id, prompt);
+        }
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -671,6 +686,227 @@ app.delete('/api/generated-images/:id', async (req, res) => {
     }
 });
 
+// ===================== Auto-Tagging Function =====================
+
+async function autoTagImage(imageId, prompt) {
+    try {
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        // Get all available tags
+        const { data: tags, error: tagsError } = await supabase
+            .from('product_tags')
+            .select('*')
+            .eq('is_active', true);
+            
+        if (tagsError || !tags) {
+            console.error('Error fetching tags for auto-tagging:', tagsError);
+            return;
+        }
+        
+        const promptLower = prompt.toLowerCase();
+        const suggestedTags = [];
+        
+        // Smart tagging based on prompt content
+        const tagKeywords = {
+            'photobook': ['family', 'memories', 'album', 'photos', 'book', 'collection'],
+            'canvas': ['wall', 'art', 'painting', 'canvas', 'decor', 'artwork', 'portrait'],
+            'mug': ['coffee', 'tea', 'mug', 'cup', 'drink', 'morning', 'kitchen'],
+            'poster': ['poster', 'print', 'wall', 'room', 'decoration', 'display'],
+            'calendar': ['calendar', 'date', 'month', 'year', 'schedule', 'planning'],
+            'greeting-card': ['card', 'greeting', 'birthday', 'celebration', 'holiday', 'congratulations'],
+            'phone-case': ['phone', 'mobile', 'case', 'protection', 'device'],
+            't-shirt': ['shirt', 'clothing', 'apparel', 'wear', 'fashion'],
+            'pillow': ['pillow', 'cushion', 'sofa', 'bed', 'comfort', 'home'],
+            'keychain': ['keychain', 'keys', 'small', 'accessory', 'pocket'],
+            'family': ['family', 'parents', 'children', 'kids', 'together', 'relatives', 'generations'],
+            'lifestyle': ['lifestyle', 'daily', 'routine', 'living', 'modern', 'contemporary'],
+            'celebration': ['celebration', 'party', 'birthday', 'anniversary', 'wedding', 'holiday', 'festive'],
+            'home-decor': ['home', 'house', 'interior', 'decor', 'decoration', 'living room', 'bedroom'],
+            'gift': ['gift', 'present', 'surprise', 'giving', 'special', 'thoughtful']
+        };
+        
+        // Check each tag for keyword matches
+        tags.forEach(tag => {
+            const keywords = tagKeywords[tag.name] || [];
+            const hasMatch = keywords.some(keyword => promptLower.includes(keyword));
+            
+            if (hasMatch) {
+                suggestedTags.push(tag.id);
+            }
+        });
+        
+        // Always add some default tags based on common use cases
+        const defaultTags = ['family', 'lifestyle', 'home-decor'];
+        defaultTags.forEach(tagName => {
+            const tag = tags.find(t => t.name === tagName);
+            if (tag && !suggestedTags.includes(tag.id)) {
+                suggestedTags.push(tag.id);
+            }
+        });
+        
+        // Limit to 5 tags maximum
+        const finalTags = suggestedTags.slice(0, 5);
+        
+        if (finalTags.length > 0) {
+            // Insert image-tag relationships
+            const imageTags = finalTags.map(tagId => ({
+                image_id: imageId,
+                tag_id: tagId
+            }));
+
+            const { error: insertError } = await supabase
+                .from('image_tags')
+                .insert(imageTags);
+
+            if (insertError) {
+                console.error('Error auto-tagging image:', insertError);
+            } else {
+                console.log(`Auto-tagged image ${imageId} with ${finalTags.length} tags`);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Auto-tagging error:', error);
+    }
+}
+
+// ===================== Tags API Endpoints =====================
+
+// Get all product tags
+app.get('/api/tags', async (req, res) => {
+    try {
+        const { createClient } = require('@supabase/supabase-js');
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+            return res.status(500).json({ error: 'Supabase configuration missing' });
+        }
+
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const { data: tags, error } = await supabase
+            .from('product_tags')
+            .select('*')
+            .eq('is_active', true)
+            .order('display_name');
+
+        if (error) {
+            console.error('Error fetching tags:', error);
+            return res.status(500).json({ error: 'Failed to fetch tags' });
+        }
+
+        res.json({ success: true, tags });
+    } catch (error) {
+        console.error('Tags API error:', error);
+        res.status(500).json({ error: 'Failed to load tags' });
+    }
+});
+
+// Add tags to an image
+app.post('/api/images/:imageId/tags', async (req, res) => {
+    try {
+        const { imageId } = req.params;
+        const { tagIds } = req.body;
+        
+        if (!imageId || !tagIds || !Array.isArray(tagIds)) {
+            return res.status(400).json({ error: 'Image ID and tag IDs array required' });
+        }
+
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        // Insert image-tag relationships
+        const imageTags = tagIds.map(tagId => ({
+            image_id: imageId,
+            tag_id: tagId
+        }));
+
+        const { data, error } = await supabase
+            .from('image_tags')
+            .upsert(imageTags, { onConflict: 'image_id,tag_id' })
+            .select();
+
+        if (error) {
+            console.error('Error adding tags to image:', error);
+            return res.status(500).json({ error: 'Failed to add tags to image' });
+        }
+
+        res.json({ success: true, message: 'Tags added successfully', data });
+    } catch (error) {
+        console.error('Add tags error:', error);
+        res.status(500).json({ error: 'Failed to add tags' });
+    }
+});
+
+// Remove a tag from an image
+app.delete('/api/images/:imageId/tags/:tagId', async (req, res) => {
+    try {
+        const { imageId, tagId } = req.params;
+        
+        if (!imageId || !tagId) {
+            return res.status(400).json({ error: 'Image ID and tag ID required' });
+        }
+
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const { error } = await supabase
+            .from('image_tags')
+            .delete()
+            .eq('image_id', imageId)
+            .eq('tag_id', tagId);
+
+        if (error) {
+            console.error('Error removing tag from image:', error);
+            return res.status(500).json({ error: 'Failed to remove tag from image' });
+        }
+
+        res.json({ success: true, message: 'Tag removed successfully' });
+    } catch (error) {
+        console.error('Remove tag error:', error);
+        res.status(500).json({ error: 'Failed to remove tag' });
+    }
+});
+
+// Get tags for a specific image
+app.get('/api/images/:imageId/tags', async (req, res) => {
+    try {
+        const { imageId } = req.params;
+        
+        if (!imageId) {
+            return res.status(400).json({ error: 'Image ID required' });
+        }
+
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const { data: imageTags, error } = await supabase
+            .from('image_tags')
+            .select(`
+                tag_id,
+                product_tags (
+                    id,
+                    name,
+                    display_name,
+                    color,
+                    description
+                )
+            `)
+            .eq('image_id', imageId);
+
+        if (error) {
+            console.error('Error fetching image tags:', error);
+            return res.status(500).json({ error: 'Failed to fetch image tags' });
+        }
+
+        const tags = imageTags.map(item => item.product_tags);
+        res.json({ success: true, tags });
+    } catch (error) {
+        console.error('Get image tags error:', error);
+        res.status(500).json({ error: 'Failed to get image tags' });
+    }
+});
+
 // ===================== Gallery API Endpoints =====================
 
 // Simple test endpoint
@@ -826,7 +1062,8 @@ app.get('/api/gallery/images', async (req, res) => {
                                     created_at: file.created_at,
                                     updated_at: file.updated_at,
                                     model: folder.name,
-                                    id: `${folder.name}-${file.name}`
+                                    id: `${folder.name}-${file.name}`,
+                                    tags: [] // Will be populated if we have database records
                                 };
                             });
                         
@@ -840,6 +1077,38 @@ app.get('/api/gallery/images', async (req, res) => {
             
             // Sort all images by creation date (newest first)
             images.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            // Try to get tags for images that exist in the database
+            try {
+                const { data: dbImages, error: dbError } = await supabase
+                    .from('generated_images')
+                    .select(`
+                        storage_path,
+                        id,
+                        image_tags (
+                            product_tags (
+                                id,
+                                name,
+                                display_name,
+                                color
+                            )
+                        )
+                    `);
+                
+                if (!dbError && dbImages) {
+                    // Map database tags to storage images
+                    images.forEach(image => {
+                        const dbImage = dbImages.find(db => db.storage_path === image.path);
+                        if (dbImage && dbImage.image_tags) {
+                            image.tags = dbImage.image_tags.map(it => it.product_tags);
+                            image.dbId = dbImage.id; // Store database ID for tag operations
+                        }
+                    });
+                }
+            } catch (tagError) {
+                console.error('Gallery API: Error fetching tags:', tagError);
+                // Continue without tags if there's an error
+            }
         }
 
         console.log(`Gallery API: Returning ${images.length} images`);

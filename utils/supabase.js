@@ -71,7 +71,8 @@ const saveGeneratedImage = async (imageData) => {
             return null;
         }
 
-        return { ...data, publicUrl };
+        // Return the saved image data with database ID for auto-tagging
+        return { ...data, publicUrl, id: data.id, prompt: imageData.prompt };
 
     } catch (err) {
         console.error('Image save exception:', err);
