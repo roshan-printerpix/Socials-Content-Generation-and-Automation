@@ -17,25 +17,33 @@ const axios = require('axios');
 const promptManager = require('./utils/promptManager');
 const { saveGeneratedImage, getGeneratedImages, deleteGeneratedImage, saveInstagramPost } = require('./utils/supabase');
 
-// Debug Supabase connection
-console.log('🔍 Supabase URL:', process.env.SUPABASE_URL ? 'Set' : 'Not set');
-console.log('🔍 Supabase Key:', process.env.SUPABASE_ANON_KEY ? 'Set' : 'Not set');
-
 // --- OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// --- Google GenAI
+// --- Google GenAI for Images
 let googleAI;
 try {
     if (!process.env.GEMINI_API_KEY) {
         throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
     googleAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    console.log('✅ Google GenAI initialized successfully');
 } catch (error) {
-    console.error('❌ Failed to initialize Google GenAI:', error.message);
+    console.error('Failed to initialize Google GenAI (Images):', error.message);
     googleAI = null;
 }
+
+// --- Google GenAI for Videos (Veo)
+let googleVeoAI;
+try {
+    if (!process.env.GEMINI_VEO_API_KEY) {
+        throw new Error('GEMINI_VEO_API_KEY is not set in environment variables');
+    }
+    googleVeoAI = new GoogleGenAI({ apiKey: process.env.GEMINI_VEO_API_KEY });
+} catch (error) {
+    console.error('Failed to initialize Google Veo AI (Videos):', error.message);
+    googleVeoAI = null;
+}
+
 
 // --- Uploads
 const upload = multer({
@@ -96,17 +104,8 @@ app.post('/api/imagen3', async (req, res) => {
             status: 'completed'
         };
 
-        console.log('🔍 Attempting to save image to database...');
-        try {
-            const savedData = await saveGeneratedImage(imageData);
-            if (savedData) {
-                console.log('✅ Image saved to database successfully:', savedData.id);
-            } else {
-                console.log('⚠️ Image not saved - Supabase may not be configured');
-            }
-        } catch (dbError) {
-            console.error('❌ Database save error:', dbError);
-        }
+        // Save to database
+        await saveGeneratedImage(imageData);
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -144,17 +143,8 @@ app.post('/api/imagen4', async (req, res) => {
             status: 'completed'
         };
 
-        console.log('🔍 Attempting to save Imagen 4 image to database...');
-        try {
-            const savedData = await saveGeneratedImage(imageData);
-            if (savedData) {
-                console.log('✅ Imagen 4 image saved to database successfully:', savedData.id);
-            } else {
-                console.log('⚠️ Imagen 4 image not saved - Supabase may not be configured');
-            }
-        } catch (dbError) {
-            console.error('❌ Imagen 4 database save error:', dbError);
-        }
+        // Save to database
+        await saveGeneratedImage(imageData);
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -192,17 +182,8 @@ app.post('/api/imagen4ultra', async (req, res) => {
             status: 'completed'
         };
 
-        console.log('🔍 Attempting to save Imagen 4 Ultra image to database...');
-        try {
-            const savedData = await saveGeneratedImage(imageData);
-            if (savedData) {
-                console.log('✅ Imagen 4 Ultra image saved to database successfully:', savedData.id);
-            } else {
-                console.log('⚠️ Imagen 4 Ultra image not saved - Supabase may not be configured');
-            }
-        } catch (dbError) {
-            console.error('❌ Imagen 4 Ultra database save error:', dbError);
-        }
+        // Save to database
+        await saveGeneratedImage(imageData);
 
         res.json({ base64: base64Image });
     } catch (error) {
@@ -424,13 +405,21 @@ app.post('/api/enhance-video-prompt', async (req, res) => {
         const videoSystemPrompt = systemPrompts.videoEnhancePrompt;
 
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{ role: 'user', content: `${videoSystemPrompt}\n\nBasic video prompt: ${prompt}` }],
-            temperature: 0.7
+            model: 'gpt-5-nano',
+            messages: [{ role: 'user', content: `${videoSystemPrompt}\n\nUser scenario: ${prompt}` }],
+            temperature: 1
         });
 
         const enhancedContent = response.choices[0].message.content;
-        res.json({ enhancedPrompt: enhancedContent });
+
+        try {
+            const jsonResponse = JSON.parse(enhancedContent);
+            // Return the full JSON response as the enhanced prompt
+            res.json({ enhancedPrompt: JSON.stringify(jsonResponse, null, 2) });
+        } catch {
+            // If JSON parsing fails, return the raw content
+            res.json({ enhancedPrompt: enhancedContent });
+        }
     } catch (error) {
         console.error('Video Prompt Enhancement Error:', error);
         res.status(500).json({ error: error.message || 'Failed to enhance video prompt' });
@@ -456,135 +445,161 @@ app.post('/api/runway/video', async (req, res) => {
     }
 });
 
-// ===================== Video: Veo 3 Generation =====================
-app.post('/api/veo/video', async (req, res) => {
+// ===================== Video: Sora (mock) =====================
+
+app.post('/api/sora/video', async (req, res) => {
     try {
         const { prompt } = req.body;
         if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
-        if (!googleAI) {
-            return res.status(500).json({ error: 'Google GenAI not initialized. Check your GEMINI_API_KEY.' });
-        }
+        console.log(`Generating Sora video for prompt: ${prompt}`);
 
-        console.log(`Generating Veo 3 video for prompt: ${prompt}`);
+        // Mock implementation - Sora API not yet available
+        await new Promise(resolve => setTimeout(resolve, 4000)); // Slightly longer for "premium" model
 
-        // Start the job (returns an operation object)
-        let operation;
-        try {
-            operation = await googleAI.models.generateVideos({
-                model: 'veo-3.0-generate-preview',
-                prompt,
-                // optional:
-                // config: { negative_prompt: 'low quality, cartoon' },
-                // image: <image object from Imagen if doing image-to-video>
-            });
-        } catch (apiError) {
-            console.error('Veo API Error:', apiError);
-
-            // Check for quota/rate limit errors
-            if (apiError.message && (
-                apiError.message.includes('quota') ||
-                apiError.message.includes('RESOURCE_EXHAUSTED') ||
-                apiError.message.includes('429')
-            )) {
-                throw new Error(`🚫 Veo 3 quota exceeded. Your implementation is working correctly! Please visit https://aistudio.google.com/ to check your quota limits and billing settings. You may need to wait for quota reset or upgrade your plan.`);
-            }
-
-            throw new Error(`Veo 3 API call failed: ${apiError.message}. This might indicate that Veo 3 is not available with your current API key or the model name is incorrect.`);
-        }
-
-        console.log('Initial operation:', JSON.stringify(operation, null, 2));
-
-        if (!operation) {
-            throw new Error('No operation returned from generateVideos');
-        }
-
-        if (!operation.name) {
-            throw new Error(`Operation missing name property. Operation structure: ${JSON.stringify(operation, null, 2)}`);
-        }
-
-        // Poll exactly as the docs show: pass the operation name to get()
-        const MAX_POLLS = 60; // ~10 minutes @ 10s
-        for (let i = 0; i < MAX_POLLS && !operation.done; i++) {
-            await new Promise(r => setTimeout(r, 10_000));
-            console.log(`Polling attempt ${i + 1}, operation name: ${operation.name}`);
-
-            try {
-                operation = await googleAI.operations.get({ name: operation.name });
-                console.log(`Poll ${i + 1} result:`, JSON.stringify(operation, null, 2));
-            } catch (pollError) {
-                console.error(`Error during poll ${i + 1}:`, pollError);
-                throw new Error(`Polling error: ${pollError.message}`);
-            }
-
-            if (operation.error) {
-                throw new Error(`Veo operation error: ${operation.error.message || JSON.stringify(operation.error)}`);
-            }
-        }
-
-        if (!operation.done) throw new Error('Video generation timed out');
-
-        // Debug: Log the full operation response
-        console.log('Full operation response:', JSON.stringify(operation, null, 2));
-
-        const generated = operation.response?.generatedVideos?.[0];
-        console.log('Generated video object:', JSON.stringify(generated, null, 2));
-
-        if (!generated) throw new Error('No generated video in response');
-        if (!generated.video) throw new Error('No video object in generated response');
-
-        // Pull the file handle to use with your proxy (files/<id>)
-        const fileName =
-            generated.video.name ||
-            (String(generated.video.uri || generated.video.url || generated.video.downloadUrl).match(/\/(files\/[^:\/\s]+)/)?.[1]);
-
-        console.log('Extracted fileName:', fileName);
-
-        if (!fileName) throw new Error('Could not determine file handle for proxying');
-
-        // Return your authenticated proxy URL
-        const proxiedUrl = `/api/veo/proxy/${fileName}`;
-        res.json({ success: true, model: 'google-veo-3', videoUrl: proxiedUrl });
-
-    } catch (err) {
-        console.error('Google Veo Error:', err);
-        res.status(500).json({ error: err.message || 'Failed to generate video with Google Veo' });
+        res.json({
+            success: true,
+            model: 'sora',
+            message: 'Sora integration coming soon! OpenAI has not yet released the Sora API.',
+            duration: '5s',
+            isPlaceholder: true
+        });
+    } catch (error) {
+        console.error('Sora Error:', error);
+        res.status(500).json({ error: error.message || 'Failed to generate video with Sora' });
     }
 });
 
-// ===================== Video: Veo Proxy (STREAMING, wildcard) =====================
-// We use a wildcard so we can capture "files/<id>" which contains a slash.
-app.get('/api/veo/proxy/*', async (req, res) => {
+// ===================== Video: Veo 3 Generation =====================
+
+// ===================== Video: Veo 3 Generation =====================
+
+// ===================== Video: Veo 3 Generation =====================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+app.post("/api/veo/video", async (req, res) => {
+  try {
+    const { prompt, negativePrompt /*, personGeneration */ } = req.body;
+    if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+    if (!googleVeoAI) return res.status(500).json({ error: "Google Veo AI not initialized. Check GEMINI_VEO_API_KEY." });
+
+    console.log(`[Veo3] start, prompt="${prompt.slice(0,120)}${prompt.length>120?"...":""}"`);
+
+    let op = await googleVeoAI.models.generateVideos({
+      model: "veo-3.0-fast-generate-preview",
+      prompt,
+      config: {
+        aspectRatio: "16:9",
+        negativePrompt: negativePrompt || undefined,
+        // personGeneration: "dont_allow" // only if you explicitly need it; MENA defaults apply
+      },
+    });
+
+    const MAX_POLLS = 60;
+    for (let i = 0; i < MAX_POLLS && !op.done; i++) {
+      await sleep(10_000);
+      op = await googleVeoAI.operations.getVideosOperation({ operation: op });
+      if (op.error) throw new Error(op.error.message || "Video generation failed");
+    }
+    if (!op.done) throw new Error("Video generation timed out");
+
+    // --- Accept both return shapes ---
+    const videoObj = op.response?.generatedVideos?.[0]?.video;
+
+    // Case 1: SDK returns a signed/authorized URI
+    if (videoObj && typeof videoObj === "object" && (videoObj.uri || videoObj.url || videoObj.downloadUrl)) {
+      const raw = videoObj.uri || videoObj.url || videoObj.downloadUrl;
+      // Some URIs require the API key appended when fetched by the browser.
+      const videoUrl = raw.includes("key=") ? raw : `${raw}${raw.includes("?") ? "&" : "?"}key=${process.env.GEMINI_VEO_API_KEY}`;
+      return res.json({
+        success: true,
+        model: "veo-3.0-fast-generate-preview",
+        videoUrl,                 // <-- frontend can <video src> this directly
+        duration: "8s",
+        aspectRatio: "16:9",
+      });
+    }
+
+    // Case 2: SDK returns a file handle (e.g., "files/abc123")
+    const handle = (typeof videoObj === "string") ? videoObj
+                 : (videoObj && videoObj.name ? videoObj.name : null);
+    if (handle) {
+      return res.json({
+        success: true,
+        model: "veo-3.0-fast-generate-preview",
+        file: handle,             // <-- your /download route will use this
+        duration: "8s",
+        aspectRatio: "16:9",
+      });
+    }
+
+    // Neither shape present
+    console.error("[Veo3] unexpected op.response:", JSON.stringify(op.response || {}, null, 2));
+    throw new Error("No downloadable file reference returned");
+  } catch (err) {
+    console.error("[Veo3] error:", err);
+    res.status(500).json({ error: err.message || "Failed to generate video with Veo 3" });
+  }
+});
+
+// ===================== Secure download proxy =====================
+
+const fs = require("fs");
+const os = require("os");
+
+app.get("/api/veo/video/download", async (req, res) => {
+    const { file } = req.query;
+    if (!file) return res.status(400).json({ error: "Missing file parameter" });
+    if (!googleVeoAI) return res.status(500).json({ error: "Google Veo AI not initialized" });
+  
+    // Make sure we have just the file handle string (like "files/abc123")
+    const fileHandle = String(file);
+  
+    // Prepare a temp file path
+    const tmpDir = os.tmpdir();
+    const safeBase = (fileHandle.split("/").pop() || "veo.mp4").replace(/[^\w.-]/g, "_");
+    const tmpPath = path.join(tmpDir, `${Date.now()}_${safeBase}`);
+  
     try {
-        const fileName = decodeURIComponent(req.params[0]); // "files/<id>"
-        console.log(`Proxying video file: ${fileName}`);
-
-        if (!googleAI) {
-            return res.status(500).send('Google GenAI not initialized. Check your GEMINI_API_KEY.');
-        }
-
-        const fileResp = await googleAI.files.download({ name: fileName });
-
-        const ct = fileResp.headers?.get?.('content-type') || 'application/octet-stream';
-        const cl = fileResp.headers?.get?.('content-length');
-        res.setHeader('Content-Type', ct);
-        if (cl) res.setHeader('Content-Length', cl);
-        res.setHeader('Accept-Ranges', 'none');
-
-        const { Readable } = require('stream');
-        if (fileResp.body && typeof fileResp.body.getReader === 'function') {
-            Readable.fromWeb(fileResp.body).pipe(res);
-        } else if (fileResp.body?.pipe) {
-            fileResp.body.pipe(res);
-        } else {
-            const ab = await fileResp.arrayBuffer();
-            res.end(Buffer.from(ab));
-        }
+      // 1) Download to disk. SDK resolves when the file is fully written.
+      await googleVeoAI.files.download({
+        file: fileHandle,
+        downloadPath: tmpPath,
+      });
+  
+      // 2) Verify the file is really there and non-empty
+      const st = await fs.promises.stat(tmpPath).catch(() => null);
+      if (!st || !st.isFile() || st.size === 0) {
+        throw new Error(`Downloaded file missing or empty at ${tmpPath}`);
+      }
+  
+      // 3) Stream to client, then cleanup
+      res.setHeader("Content-Type", "video/mp4");
+      // Optional inline filename
+      res.setHeader("Content-Disposition", `inline; filename="${safeBase}"`);
+  
+      const stream = fs.createReadStream(tmpPath);
+      stream.on("error", (err) => {
+        console.error("[Veo3] read stream error:", err);
+        if (!res.headersSent) res.status(500).json({ error: "Failed to read downloaded video" });
+        // Cleanup on error
+        fs.promises.unlink(tmpPath).catch(() => {});
+      });
+      res.on("close", () => {
+        // Client closed early; cleanup
+        fs.promises.unlink(tmpPath).catch(() => {});
+      });
+      stream.pipe(res).on("finish", () => {
+        fs.promises.unlink(tmpPath).catch(() => {});
+      });
     } catch (err) {
-        console.error('Proxy download error:', err);
-        res.status(500).send('Unable to fetch video');
+      console.error("[Veo3] download/serve error:", err);
+      // Attempt cleanup if the file exists
+      fs.promises.unlink(tmpPath).catch(() => {});
+      res.status(500).json({ error: err.message || "Failed to download video" });
     }
-});
+  });
+
 
 // ===================== Video Caption =====================
 
@@ -598,9 +613,9 @@ app.post('/api/generate-video-caption', async (req, res) => {
         const videoCaptionPrompt = systemPrompts.videoCaptionPrompt.replace('{prompt}', prompt);
 
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o',
+            model: 'gpt-5-nano',
             messages: [{ role: 'user', content: videoCaptionPrompt }],
-            temperature: 0.8
+            temperature: 1
         });
 
         const content = response.choices[0].message.content;
@@ -718,7 +733,7 @@ app.delete('/api/generated-images/:id', async (req, res) => {
 
         console.log(`Deleting image: ${id}`);
         const success = await deleteGeneratedImage(id);
-        
+
         if (success) {
             res.json({ success: true, message: 'Image deleted successfully' });
         } else {
@@ -734,12 +749,4 @@ app.delete('/api/generated-images/:id', async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`✨ Server running at http://localhost:${PORT}`);
-    console.log('✉️ Ensure your .env file contains:');
-    console.log('   OPENAI_API_KEY=your_openai_key');
-    console.log('   GEMINI_API_KEY=your_gemini_key');
-    console.log('   INSTAGRAM_ACCESS_TOKEN=your_instagram_token (for Instagram posting)');
-    console.log('   IG_USER_ID=your_instagram_user_id');
-    console.log('   CLOUDINARY_CLOUD_NAME=...');
-    console.log('   CLOUDINARY_API_KEY=...');
-    console.log('   CLOUDINARY_API_SECRET=...');
 });

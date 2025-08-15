@@ -75,6 +75,7 @@ A comprehensive web application that generates marketing images and videos using
    # AI Service APIs
    OPENAI_API_KEY=your_openai_api_key
    GEMINI_API_KEY=your_gemini_api_key
+   GEMINI_VEO_API_KEY=your_gemini_veo_api_key
    
    # Instagram Integration
    INSTAGRAM_ACCESS_TOKEN=your_instagram_access_token

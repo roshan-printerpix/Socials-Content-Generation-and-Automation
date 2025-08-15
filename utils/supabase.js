@@ -12,27 +12,11 @@ const supabase = supabaseUrl && supabaseKey
     ? createClient(supabaseUrl, supabaseKey)
     : null;
 
-// Test connection on startup
-if (supabase) {
-    console.log('✅ Supabase client created successfully');
-    console.log('🔗 Supabase URL:', supabaseUrl);
-    console.log('🔑 Supabase Key (first 20 chars):', supabaseKey.substring(0, 20) + '...');
-} else {
-    console.log('❌ Supabase client not created - missing credentials');
-}
-
 // Database helper functions
 const saveGeneratedImage = async (imageData) => {
     if (!supabase) {
-        console.warn('Supabase not configured, skipping database save');
         return null;
     }
-
-    console.log('🔍 Attempting to save image to storage and database:', {
-        model: imageData.model,
-        promptLength: imageData.prompt?.length,
-        hasBase64: !!imageData.base64_image
-    });
 
     try {
         // Convert base64 to buffer
@@ -43,8 +27,6 @@ const saveGeneratedImage = async (imageData) => {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const filename = `${imageData.model}/${timestamp}-${Math.random().toString(36).substring(2, 15)}.png`;
         
-        console.log('📁 Uploading to storage bucket:', filename);
-        
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('generated-images')
@@ -54,11 +36,9 @@ const saveGeneratedImage = async (imageData) => {
             });
 
         if (uploadError) {
-            console.error('❌ Storage upload error:', uploadError);
+            console.error('Storage upload error:', uploadError);
             return null;
         }
-
-        console.log('✅ Image uploaded to storage:', uploadData.path);
 
         // Get public URL
         const { data: urlData } = supabase.storage
@@ -66,7 +46,6 @@ const saveGeneratedImage = async (imageData) => {
             .getPublicUrl(filename);
 
         const publicUrl = urlData.publicUrl;
-        console.log('🔗 Public URL:', publicUrl);
 
         // Save metadata to database (without base64)
         const dbData = {
@@ -86,17 +65,16 @@ const saveGeneratedImage = async (imageData) => {
             .single();
 
         if (error) {
-            console.error('❌ Database insert error:', error);
+            console.error('Database insert error:', error);
             // Try to clean up uploaded file
             await supabase.storage.from('generated-images').remove([filename]);
             return null;
         }
 
-        console.log('✅ Image metadata saved to database:', data.id);
         return { ...data, publicUrl };
 
     } catch (err) {
-        console.error('❌ Image save exception:', err);
+        console.error('Image save exception:', err);
         return null;
     }
 };

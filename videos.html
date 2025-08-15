@@ -2,102 +2,105 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Printerpix Studio - Videos</title>
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/navbar.css">
-    <link rel="stylesheet" href="css/settings.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Printerpix Studio - Videos</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/navbar.css">
+  <link rel="stylesheet" href="css/settings.css">
 </head>
 
 <body>
-    <nav class="floating-navbar">
-        <div class="navbar-content">
-            <div class="navbar-brand">
-                <h2>Printerpix Studio</h2>
-            </div>
-            <div class="navbar-nav">
-                <a href="/" class="nav-link">Images</a>
-                <a href="/videos.html" class="nav-link active">Videos</a>
-                <a href="#" class="nav-link" id="promptsBtn">Prompts</a>
-            </div>
-        </div>
-    </nav>
+  <nav class="floating-navbar">
+    <div class="navbar-content">
+      <div class="navbar-brand">
+        <h2>Printerpix Studio</h2>
+      </div>
+      <div class="navbar-nav">
+        <a href="/" class="nav-link">Images</a>
+        <a href="/videos.html" class="nav-link active">Videos</a>
+        <a href="#" class="nav-link" id="promptsBtn">Prompts</a>
+      </div>
+    </div>
+  </nav>
 
-    <div class="container">
-        <div class="input-section">
-            <textarea id="videoPromptInput" class="prompt-input"
-                placeholder="Enter your basic video prompt here... (e.g., 'Family watching home videos together in living room, UK')"></textarea>
-            <div style="margin-bottom: 15px;">
-                <button id="videoEnhanceBtn" class="enhance-btn" disabled>Enhance Prompt</button>
-            </div>
-            <div class="enhanced-prompt-container">
-                <textarea id="videoEnhancedPrompt" class="enhanced-prompt"
-                    placeholder="Enhanced video prompt will appear here... You can edit it before generating videos."></textarea>
-                <div id="videoEnhancedTiming" class="timing-info" style="display: none;"></div>
-            </div>
-            <div style="margin-top: 15px;">
-                <button id="videoGenerateBtn" class="generate-btn" disabled>Generate Post</button>
-            </div>
-        </div>
+  <div class="container">
+    <div class="input-section">
+      <textarea id="videoPromptInput" class="prompt-input"
+        placeholder="Enter your basic video prompt here... (e.g., 'Family watching home videos together in living room, UK')"></textarea>
 
-        <div class="results-section">
-            <div class="results-grid">
-                <div class="result-card" data-model="runway">
-                    <div class="result-header gemini">
-                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15,3 21,3 21,9"></polyline>
-                            <polyline points="9,21 3,21 3,15"></polyline>
-                            <line x1="21" y1="3" x2="14" y2="10"></line>
-                            <line x1="3" y1="21" x2="10" y2="14"></line>
-                        </svg>
-                        Runway ML
-                    </div>
-                    <div id="runwayResult" class="result-image">Enter a prompt to generate</div>
-                </div>
+      <div style="margin-bottom: 15px;">
+        <button id="videoEnhanceBtn" class="enhance-btn" disabled>Enhance Prompt</button>
+      </div>
 
-                <div class="result-card" data-model="sora">
-                    <div class="result-header gemini">
-                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15,3 21,3 21,9"></polyline>
-                            <polyline points="9,21 3,21 3,15"></polyline>
-                            <line x1="21" y1="3" x2="14" y2="10"></line>
-                            <line x1="3" y1="21" x2="10" y2="14"></line>
-                        </svg>
-                        OpenAI Sora
-                    </div>
-                    <div id="soraResult" class="result-image">Enter a prompt to generate</div>
-                </div>
+      <div class="enhanced-prompt-container">
+        <textarea id="videoEnhancedPrompt" class="enhanced-prompt"
+          placeholder="Enhanced video prompt will appear here... You can edit it before generating videos."></textarea>
+        <div id="videoEnhancedTiming" class="timing-info" style="display: none;"></div>
+      </div>
 
-                <div class="result-card" data-model="veo">
-                    <div class="result-header gemini">
-                        <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="15,3 21,3 21,9"></polyline>
-                            <polyline points="9,21 3,21 3,15"></polyline>
-                            <line x1="21" y1="3" x2="14" y2="10"></line>
-                            <line x1="3" y1="21" x2="10" y2="14"></line>
-                        </svg>
-                        Google Veo 3
-                    </div>
-                    <div id="veoResult" class="result-image">Enter a prompt to generate</div>
-                </div>
-            </div>
-
-            <div class="caption-section" id="videoCaptionSection">
-                <div class="input-section">
-                    <div class="caption-container">
-                        <textarea id="videoPostContent" class="post-content-input"
-                            placeholder="Your Instagram post content will appear here..."></textarea>
-                        <div id="videoCaptionTiming" class="timing-info" style="display: none;"></div>
-                    </div>
-                    <div style="margin-top: 15px;">
-                        <button id="videoPostBtn" class="generate-btn" disabled>Post to Instagram</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div style="margin-top: 15px;">
+        <button id="videoGenerateBtn" class="generate-btn" disabled>Generate Post</button>
+      </div>
     </div>
 
-    <script src="js/videos.js"></script>
+    <div class="results-section">
+      <div class="results-grid">
+        <div class="result-card" data-model="runway">
+          <div class="result-header gemini">
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15,3 21,3 21,9"></polyline>
+              <polyline points="9,21 3,21 3,15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            Runway ML
+          </div>
+          <div id="runwayResult" class="result-image">Enter a prompt to generate</div>
+        </div>
+
+        <div class="result-card" data-model="sora">
+          <div class="result-header gemini">
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15,3 21,3 21,9"></polyline>
+              <polyline points="9,21 3,21 3,15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            OpenAI Sora
+          </div>
+          <div id="soraResult" class="result-image">Enter a prompt to generate</div>
+        </div>
+
+        <div class="result-card" data-model="veo">
+          <div class="result-header gemini">
+            <svg class="expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15,3 21,3 21,9"></polyline>
+              <polyline points="9,21 3,21 3,15"></polyline>
+              <line x1="21" y1="3" x2="14" y2="10"></line>
+              <line x1="3" y1="21" x2="10" y2="14"></line>
+            </svg>
+            Google Veo 3
+          </div>
+          <div id="veoResult" class="result-image">Enter a prompt to generate</div>
+        </div>
+      </div>
+
+      <div class="caption-section" id="videoCaptionSection">
+        <div class="input-section">
+          <div class="caption-container">
+            <textarea id="videoPostContent" class="post-content-input"
+              placeholder="Your Instagram post content will appear here..."></textarea>
+            <div id="videoCaptionTiming" class="timing-info" style="display: none;"></div>
+          </div>
+          <div style="margin-top: 15px;">
+            <button id="videoPostBtn" class="generate-btn" disabled>Post to Instagram</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/videos.js"></script>
 </body>
 </html>
