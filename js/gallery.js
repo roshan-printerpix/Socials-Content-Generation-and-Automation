@@ -16,8 +16,22 @@ class Gallery {
         this.initElements();
         this.initEventListeners();
         this.initializeDropdowns();
-        this.loadTags();
-        this.loadGallery();
+        
+        // Load tags first, then gallery
+        this.loadTags().then(() => {
+            console.log('🏷️ Tags loaded successfully, now loading gallery...');
+            // Ensure selectedTags is properly initialized
+            if (this.selectedTags.length === 0 && this.availableTags.length > 0) {
+                this.selectedTags = this.availableTags.map(tag => tag.id);
+                console.log('🏷️ Initialized selectedTags:', this.selectedTags);
+            }
+            this.loadGallery();
+        }).catch(error => {
+            console.error('Failed to load tags:', error);
+            this.loadGallery(); // Load gallery even if tags fail
+        });
+
+
     }
 
     initElements() {
@@ -153,7 +167,7 @@ class Gallery {
         });
     }
 
-    async loadGallery() {
+        async loadGallery() {
         this.showLoading();
         
         try {
@@ -167,7 +181,22 @@ class Gallery {
             this.images = data.images || [];
             
             this.updateStats();
-            this.renderGallery();
+            
+            // Wait for tags to be loaded before rendering gallery
+            if (this.availableTags.length > 0) {
+                console.log('🏷️ Tags already loaded, rendering gallery immediately');
+                this.renderGallery();
+            } else {
+                // If tags aren't loaded yet, wait for them
+                console.log('🏷️ Waiting for tags to load before rendering gallery...');
+                const checkTags = setInterval(() => {
+                    if (this.availableTags.length > 0) {
+                        clearInterval(checkTags);
+                        console.log('🏷️ Tags loaded, now rendering gallery');
+                        this.renderGallery();
+                    }
+                }, 100);
+            }
             
         } catch (error) {
             console.error('Error loading gallery:', error);
@@ -223,7 +252,10 @@ class Gallery {
     }
 
     renderFilteredGallery() {
+        console.log('🎨 Rendering filtered gallery with', this.filteredImages.length, 'images');
+        
         if (this.filteredImages.length === 0) {
+            console.log('🎨 No filtered images - showing empty state');
             this.showEmpty();
             return;
         }
@@ -235,6 +267,8 @@ class Gallery {
             const item = this.createGalleryItem(image, index);
             this.galleryGrid.appendChild(item);
         });
+        
+        console.log('🎨 Gallery rendered successfully');
     }
 
     createGalleryItem(image, index) {
@@ -352,7 +386,10 @@ class Gallery {
 
     // Tag dropdown methods
     toggleTagDropdown() {
+        console.log('🏷️ Toggling tag dropdown...');
         const isOpen = this.tagDropdownMenu.classList.contains('show');
+        console.log('🏷️ Dropdown is currently:', isOpen ? 'open' : 'closed');
+        
         if (isOpen) {
             this.closeTagDropdown();
         } else {
@@ -363,9 +400,41 @@ class Gallery {
     openTagDropdown() {
         this.tagDropdownTrigger.classList.add('active');
         this.tagDropdownMenu.classList.add('show');
+        
+        // Debug: Check if tag options are properly populated
+        const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        console.log('🏷️ Tag dropdown opened, found', tagCheckboxes.length, 'checkboxes');
+        console.log('🏷️ Current selectedTags:', this.selectedTags);
+        console.log('🏷️ Available tags:', this.availableTags);
+        
+        // Update checkbox states to match selectedTags
+        tagCheckboxes.forEach(checkbox => {
+            const tagId = checkbox.value; // Keep as string UUID
+            const shouldBeChecked = this.selectedTags.includes(tagId);
+            checkbox.checked = shouldBeChecked;
+            console.log(`🏷️ Checkbox for tag ${tagId}: ${shouldBeChecked ? 'checked' : 'unchecked'}`);
+        });
+        
+        // If no checkboxes found, try to repopulate
+        if (tagCheckboxes.length === 0 && this.availableTags.length > 0) {
+            console.log('🏷️ No checkboxes found, repopulating dropdown...');
+            this.populateTagDropdown();
+            
+            // After repopulating, update checkbox states again
+            setTimeout(() => {
+                const newTagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+                console.log('🏷️ After repopulation, found', newTagCheckboxes.length, 'checkboxes');
+                newTagCheckboxes.forEach(checkbox => {
+                    const tagId = checkbox.value; // Keep as string UUID
+                    const shouldBeChecked = this.selectedTags.includes(tagId);
+                    checkbox.checked = shouldBeChecked;
+                });
+            }, 100);
+        }
     }
 
     closeTagDropdown() {
+        console.log('🏷️ Closing tag dropdown...');
         this.tagDropdownTrigger.classList.remove('active');
         this.tagDropdownMenu.classList.remove('show');
     }
@@ -442,9 +511,19 @@ class Gallery {
     updateSelectedTags() {
         // Get selected tags from checkboxes
         const tagCheckboxes = document.querySelectorAll('#tagDropdownOptions .dropdown-option input[type="checkbox"]');
+        console.log('🏷️ Found', tagCheckboxes.length, 'tag checkboxes');
+        
         this.selectedTags = Array.from(tagCheckboxes)
             .filter(checkbox => checkbox.checked)
-            .map(checkbox => parseInt(checkbox.value));
+            .map(checkbox => checkbox.value); // Don't parse as int - keep as string UUID
+        
+        console.log('🏷️ Selected tags:', this.selectedTags);
+        console.log('🏷️ Available tags:', this.availableTags);
+        
+        // Log the actual checkbox values for debugging
+        tagCheckboxes.forEach((checkbox, index) => {
+            console.log(`🏷️ Checkbox ${index}: value=${checkbox.value}, checked=${checkbox.checked}`);
+        });
         
         // Update dropdown label
         this.updateTagDropdownLabel();
@@ -477,8 +556,15 @@ class Gallery {
             checkbox.checked = true;
         });
         
-        // Update selected tags and apply filter
-        this.updateSelectedTags();
+        // Set all available tags as selected
+        this.selectedTags = this.availableTags.map(tag => tag.id);
+        
+        // Update dropdown label
+        this.updateTagDropdownLabel();
+        
+        // Apply filter and re-render
+        this.applyFilter();
+        this.renderFilteredGallery();
     }
 
     clearAllTags() {
@@ -488,23 +574,44 @@ class Gallery {
             checkbox.checked = false;
         });
         
-        // Update selected tags and apply filter
-        this.updateSelectedTags();
+        // Clear selected tags array and update
+        this.selectedTags = [];
+        
+        // Update dropdown label
+        this.updateTagDropdownLabel();
+        
+        // Apply filter and re-render
+        this.applyFilter();
+        this.renderFilteredGallery();
     }
 
     populateTagDropdown() {
         // Clear existing options
         this.tagDropdownOptions.innerHTML = '';
         
+        console.log('🏷️ Populating tag dropdown with', this.availableTags.length, 'tags');
+        console.log('🏷️ Tag dropdown container:', this.tagDropdownOptions);
+        
+        if (!this.tagDropdownOptions) {
+            console.error('❌ Tag dropdown options container not found!');
+            return;
+        }
+        
         // Add available tags as options
-        this.availableTags.forEach(tag => {
+        this.availableTags.forEach((tag, index) => {
+            console.log(`🏷️ Creating option ${index + 1} for tag:`, tag.display_name, 'ID:', tag.id);
+            
             const label = document.createElement('label');
             label.className = 'dropdown-option';
             
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = tag.id;
-            checkbox.addEventListener('change', () => this.updateSelectedTags());
+            checkbox.checked = this.selectedTags.includes(tag.id); // Set initial state
+            checkbox.addEventListener('change', () => {
+                console.log('🏷️ Tag checkbox changed:', tag.display_name, 'checked:', checkbox.checked);
+                this.updateSelectedTags();
+            });
             
             const checkmark = document.createElement('span');
             checkmark.className = 'checkmark';
@@ -518,6 +625,24 @@ class Gallery {
             label.appendChild(optionText);
             
             this.tagDropdownOptions.appendChild(label);
+            console.log(`🏷️ Added option for tag: ${tag.display_name}`);
+        });
+        
+        console.log('🏷️ Tag dropdown populated successfully with', this.availableTags.length, 'options');
+        
+        // Verify the options were added
+        const addedOptions = this.tagDropdownOptions.querySelectorAll('.dropdown-option');
+        console.log('🏷️ Verified', addedOptions.length, 'options in dropdown');
+        
+        // Log each option for debugging
+        addedOptions.forEach((option, index) => {
+            const checkbox = option.querySelector('input[type="checkbox"]');
+            const text = option.querySelector('.option-text');
+            console.log(`🏷️ Option ${index + 1}:`, {
+                text: text?.textContent,
+                checkboxValue: checkbox?.value,
+                checked: checkbox?.checked
+            });
         });
     }
 
@@ -530,33 +655,67 @@ class Gallery {
         // Update the dropdown labels
         this.updateModelDropdownLabel();
         this.updateTagDropdownLabel();
+        
+        console.log('🏷️ Dropdowns initialized');
+        console.log('🏷️ Selected models:', this.selectedModels);
+        console.log('🏷️ Selected tags:', this.selectedTags);
     }
 
     applyFilter() {
+        console.log('🔍 Applying filter...');
+        console.log('📊 Total images:', this.images.length);
+        console.log('🤖 Selected models:', this.selectedModels);
+        console.log('🏷️ Selected tags:', this.selectedTags);
+        console.log('🏷️ Available tags count:', this.availableTags.length);
+        
         if (this.selectedModels.length === 0) {
             // If no models selected, show empty
             this.filteredImages = [];
+            console.log('❌ No models selected - showing empty');
         } else {
             // Filter images based on selected models
             let filtered = this.images.filter(image => 
                 this.selectedModels.includes(image.model)
             );
             
+            console.log('📊 After model filter:', filtered.length);
+            
             // Apply tag filter if tags are selected
             if (this.selectedTags.length > 0) {
+                console.log('🏷️ Applying tag filter...');
+                console.log('🏷️ Filtering by tags:', this.selectedTags);
+                
+                // Log some sample images for debugging
+                console.log('🏷️ Sample images with tags:', filtered.slice(0, 3).map(img => ({
+                    name: img.name,
+                    tags: img.tags?.map(t => t.display_name) || []
+                })));
+                
                 filtered = filtered.filter(image => {
+                    // If image has no tags, exclude it when specific tags are selected
                     if (!image.tags || image.tags.length === 0) {
-                        return false; // Image has no tags, exclude it
+                        console.log('📷 Image has no tags:', image.name, '- excluding it (no tags match)');
+                        return false; // Exclude images without tags when filtering by tags
                     }
                     
                     // Check if image has any of the selected tags
                     const imageTagIds = image.tags.map(tag => tag.id);
-                    return this.selectedTags.some(tagId => imageTagIds.includes(tagId));
+                    const hasMatchingTag = this.selectedTags.some(tagId => imageTagIds.includes(tagId));
+                    
+                    console.log(`🏷️ Image "${image.name}" tags:`, imageTagIds, 'matches:', hasMatchingTag);
+                    
+                    return hasMatchingTag;
                 });
+                
+                console.log('📊 After tag filter:', filtered.length);
+            } else {
+                console.log('🏷️ No tag filter applied - showing all images');
             }
             
             this.filteredImages = filtered;
         }
+        
+        console.log('✅ Final filtered images:', this.filteredImages.length);
         
         // Update stats to reflect filtered images
         this.updateFilteredStats();
@@ -707,6 +866,7 @@ class Gallery {
     // Tag Management Methods
     async loadTags() {
         try {
+            console.log('🏷️ Loading tags...');
             const response = await fetch('/api/tags');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -714,12 +874,24 @@ class Gallery {
             
             const data = await response.json();
             this.availableTags = data.tags || [];
+            console.log('🏷️ Loaded tags:', this.availableTags);
+            
             this.populateTagSelect();
             this.populateTagDropdown();
+            
+            console.log('🏷️ Tag dropdown populated with', this.availableTags.length, 'tags');
+            
+            // Initialize with all tags selected by default
+            this.selectedTags = this.availableTags.map(tag => tag.id);
+            console.log('🏷️ Initial selected tags:', this.selectedTags);
+            
+            // Update the dropdown label and apply initial filter
+            this.updateTagDropdownLabel();
             
         } catch (error) {
             console.error('Error loading tags:', error);
             this.availableTags = [];
+            this.selectedTags = [];
         }
     }
 
