@@ -99,6 +99,12 @@ class Gallery {
         this.cancelScheduleBtn = document.getElementById('cancelScheduleBtn');
         this.postNowBtn = document.getElementById('postNowBtn');
         this.schedulePostBtn = document.getElementById('schedulePostBtn');
+        
+        // Debug: Check if schedule elements are found
+        console.log('📅 Schedule elements check:');
+        console.log('  scheduleModeBtn:', !!this.scheduleModeBtn);
+        console.log('  scheduleModal:', !!this.scheduleModal);
+        console.log('  scheduleModalClose:', !!this.scheduleModalClose);
         this.emailModal = document.getElementById('emailModal');
         this.emailModalClose = document.getElementById('emailModalClose');
         this.recipientEmail = document.getElementById('recipientEmail');
@@ -163,11 +169,21 @@ class Gallery {
         this.sendEmailBtn.addEventListener('click', () => this.sendEmail());
         
         // Schedule event listeners
-        this.scheduleModeBtn.addEventListener('click', () => this.toggleScheduleMode());
-        this.scheduleModalClose.addEventListener('click', () => this.closeScheduleModal());
-        this.cancelScheduleBtn.addEventListener('click', () => this.closeScheduleModal());
-        this.postNowBtn.addEventListener('click', () => this.postSelectedImagesNow());
-        this.schedulePostBtn.addEventListener('click', () => this.scheduleSelectedPosts());
+        if (this.scheduleModeBtn) {
+            this.scheduleModeBtn.addEventListener('click', () => this.toggleScheduleMode());
+        }
+        if (this.scheduleModalClose) {
+            this.scheduleModalClose.addEventListener('click', () => this.closeScheduleModal());
+        }
+        if (this.cancelScheduleBtn) {
+            this.cancelScheduleBtn.addEventListener('click', () => this.closeScheduleModal());
+        }
+        if (this.postNowBtn) {
+            this.postNowBtn.addEventListener('click', () => this.postSelectedImagesNow());
+        }
+        if (this.schedulePostBtn) {
+            this.schedulePostBtn.addEventListener('click', () => this.scheduleSelectedPosts());
+        }
         
         // Close email modal when clicking outside
         this.emailModal.addEventListener('click', (e) => {
@@ -175,14 +191,16 @@ class Gallery {
         });
         
         // Close schedule modal when clicking outside
-        this.scheduleModal.addEventListener('click', (e) => {
-            if (e.target === this.scheduleModal) this.closeScheduleModal();
-        });
+        if (this.scheduleModal) {
+            this.scheduleModal.addEventListener('click', (e) => {
+                if (e.target === this.scheduleModal) this.closeScheduleModal();
+            });
+        }
         
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (this.scheduleModal.style.display !== 'none') {
+                if (this.scheduleModal && this.scheduleModal.style.display !== 'none') {
                     this.closeScheduleModal();
                 } else if (this.emailModal.style.display !== 'none') {
                     this.closeEmailModal();
@@ -1255,7 +1273,9 @@ class Gallery {
     // Scheduling System Methods
     toggleScheduleMode() {
         this.scheduleMode = !this.scheduleMode;
-        this.scheduleModeBtn.classList.toggle('active', this.scheduleMode);
+        if (this.scheduleModeBtn) {
+            this.scheduleModeBtn.classList.toggle('active', this.scheduleMode);
+        }
         
         if (this.scheduleMode) {
             // Disable notify mode if it's active
@@ -1299,21 +1319,29 @@ class Gallery {
         
         // Populate schedule modal with selected images
         this.populateScheduleModal();
-        this.scheduleModal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        if (this.scheduleModal) {
+            this.scheduleModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
     }
 
     closeScheduleModal() {
-        this.scheduleModal.style.display = 'none';
-        document.body.style.overflow = 'auto';
+        if (this.scheduleModal) {
+            this.scheduleModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
     }
 
     populateScheduleModal() {
         // Update image count
-        this.scheduleImageCount.textContent = this.selectedImages.length;
+        if (this.scheduleImageCount) {
+            this.scheduleImageCount.textContent = this.selectedImages.length;
+        }
         
         // Clear and populate image grid
-        this.scheduleImageGrid.innerHTML = '';
+        if (this.scheduleImageGrid) {
+            this.scheduleImageGrid.innerHTML = '';
+        }
         
         this.selectedImages.forEach((image, index) => {
             const imageItem = document.createElement('div');
@@ -1333,7 +1361,9 @@ class Gallery {
             
             imageItem.appendChild(img);
             imageItem.appendChild(removeBtn);
-            this.scheduleImageGrid.appendChild(imageItem);
+            if (this.scheduleImageGrid) {
+                this.scheduleImageGrid.appendChild(imageItem);
+            }
         });
     }
 
@@ -1359,24 +1389,28 @@ class Gallery {
             caption = `Transform your precious memories into beautiful keepsakes! ✨ ${imageCount} stunning images ready to become lasting treasures.`;
         }
         
-        this.postTitle.value = `Printerpix Post - ${new Date().toLocaleDateString()}`;
-        this.postCaption.value = caption + '\n\n#printerpix #memories #photobook #familymoments #personalized #keepsakes #memorymaking #photoprints';
+        if (this.postTitle) {
+            this.postTitle.value = `Printerpix Post - ${new Date().toLocaleDateString()}`;
+        }
+        if (this.postCaption) {
+            this.postCaption.value = caption + '\n\n#printerpix #memories #photobook #familymoments #personalized #keepsakes #memorymaking #photoprints';
+        }
     }
 
     async postSelectedImagesNow() {
-        const title = this.postTitle.value.trim();
-        const caption = this.postCaption.value.trim();
+        const title = this.postTitle ? this.postTitle.value.trim() : '';
+        const caption = this.postCaption ? this.postCaption.value.trim() : '';
         const platforms = this.getSelectedPlatforms();
         
         if (!title) {
             alert('Please enter a post title.');
-            this.postTitle.focus();
+            if (this.postTitle) this.postTitle.focus();
             return;
         }
         
         if (!caption) {
             alert('Please enter a caption.');
-            this.postCaption.focus();
+            if (this.postCaption) this.postCaption.focus();
             return;
         }
         
@@ -1415,20 +1449,20 @@ class Gallery {
     }
 
     async scheduleSelectedPosts() {
-        const title = this.postTitle.value.trim();
-        const caption = this.postCaption.value.trim();
+        const title = this.postTitle ? this.postTitle.value.trim() : '';
+        const caption = this.postCaption ? this.postCaption.value.trim() : '';
         const platforms = this.getSelectedPlatforms();
-        const scheduleTime = this.scheduleDateTime.value;
+        const scheduleTime = this.scheduleDateTime ? this.scheduleDateTime.value : '';
         
         if (!title) {
             alert('Please enter a post title.');
-            this.postTitle.focus();
+            if (this.postTitle) this.postTitle.focus();
             return;
         }
         
         if (!caption) {
             alert('Please enter a caption.');
-            this.postCaption.focus();
+            if (this.postCaption) this.postCaption.focus();
             return;
         }
         
@@ -1439,7 +1473,7 @@ class Gallery {
         
         if (!scheduleTime) {
             alert('Please select a schedule time.');
-            this.scheduleDateTime.focus();
+            if (this.scheduleDateTime) this.scheduleDateTime.focus();
             return;
         }
         
@@ -1447,7 +1481,7 @@ class Gallery {
         const scheduleDate = new Date(scheduleTime);
         if (scheduleDate <= new Date()) {
             alert('Please select a future date and time.');
-            this.scheduleDateTime.focus();
+            if (this.scheduleDateTime) this.scheduleDateTime.focus();
             return;
         }
         

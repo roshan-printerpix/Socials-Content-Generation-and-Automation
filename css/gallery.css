@@ -839,41 +839,43 @@
 /* Email Notification System Styles */
 .notify-toggle {
     display: flex;
-    background: #f3f4f6;
-    border-radius: 8px;
-    padding: 4px;
+    gap: 15px;
+    align-items: center;
 }
 
-.notify-btn {
-    background: transparent;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 6px;
+.notify-btn, .schedule-btn {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #374151;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 0.9rem;
-    color: #6b7280;
     font-weight: 500;
 }
 
-.notify-btn.active {
-    background: #e90b75;
-    color: white;
-    box-shadow: 0 2px 4px rgba(233, 11, 117, 0.2);
+.notify-btn:hover, .schedule-btn:hover {
+    background: #e5e7eb;
+    color: #1f2937;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.notify-btn:hover:not(.active) {
-    background: #e5e7eb;
-    color: #374151;
+.notify-btn.active, .schedule-btn.active {
+    background: #374151;
+    color: white;
+    border-color: #374151;
+    box-shadow: 0 2px 8px rgba(55, 65, 81, 0.3);
 }
 
 /* Gallery item selection styles */
-.gallery-item.notify-mode {
+.gallery-item.notify-mode, .gallery-item.schedule-mode {
     position: relative;
     cursor: pointer;
 }
 
-.gallery-item.notify-mode::before {
+.gallery-item.notify-mode::before, .gallery-item.schedule-mode::before {
     content: '';
     position: absolute;
     top: 8px;
@@ -892,7 +894,12 @@
     border-color: white;
 }
 
-.gallery-item.notify-mode.selected::after {
+.gallery-item.schedule-mode.selected::before {
+    background: #e90b75;
+    border-color: white;
+}
+
+.gallery-item.notify-mode.selected::after, .gallery-item.schedule-mode.selected::after {
     content: '✓';
     position: absolute;
     top: 12px;
@@ -903,7 +910,7 @@
     z-index: 11;
 }
 
-.gallery-item.notify-mode.selected {
+.gallery-item.notify-mode.selected, .gallery-item.schedule-mode.selected {
     transform: scale(0.95);
     box-shadow: 0 0 0 3px rgba(233, 11, 117, 0.3);
 }
@@ -1168,29 +1175,7 @@
     }
 }
 
-/* Schedule Button Styles */
-.schedule-btn {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-    margin-left: 10px;
-}
-
-.schedule-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-}
-
-.schedule-btn.active {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-}
+/* Schedule Button Styles - now handled above with notify-btn */
 
 /* Schedule Modal Styles */
 .schedule-modal-content {
@@ -1381,38 +1366,4 @@
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
-/* Schedule Mode Styles */
-.gallery-item.schedule-mode {
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.gallery-item.schedule-mode:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.2);
-    border: 2px solid #8b5cf6;
-}
-
-.gallery-item.schedule-mode.selected {
-    border: 3px solid #8b5cf6;
-    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
-    transform: translateY(-3px);
-}
-
-.gallery-item.schedule-mode.selected::after {
-    content: '✓';
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #8b5cf6;
-    color: white;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
-}
+/* Schedule Mode Styles - now handled above with notify-mode */
