@@ -62,6 +62,10 @@ app.get('/gallery.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'gallery.html'));
 });
 
+app.get('/schedule.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'schedule.html'));
+});
+
 // ===================== Imagen =====================
 
 app.post('/api/imagen3', async (req, res) => {
@@ -1216,6 +1220,206 @@ app.delete('/api/gallery/images/:filename', async (req, res) => {
     } catch (error) {
         console.error('Gallery delete error:', error);
         res.status(500).json({ error: 'Failed to delete image' });
+    }
+});
+
+// ===================== Scheduling API Endpoints =====================
+
+// Get all scheduled posts
+app.get('/api/schedule/posts', async (req, res) => {
+    try {
+        const { createClient } = require('@supabase/supabase-js');
+        
+        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+            return res.status(500).json({ error: 'Supabase configuration missing' });
+        }
+        
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const { data: posts, error } = await supabase
+            .from('scheduled_posts')
+            .select('*')
+            .order('scheduled_for', { ascending: true });
+        
+        if (error) {
+            console.error('Error fetching scheduled posts:', error);
+            return res.status(500).json({ error: 'Failed to fetch scheduled posts' });
+        }
+        
+        res.json({ success: true, posts: posts || [] });
+    } catch (error) {
+        console.error('Scheduled posts API error:', error);
+        res.status(500).json({ error: 'Failed to load scheduled posts' });
+    }
+});
+
+// Create a new scheduled post
+app.post('/api/schedule/posts', async (req, res) => {
+    try {
+        const { title, caption, social_platforms, image_paths, scheduled_for } = req.body;
+        
+        if (!title || !caption || !social_platforms || !image_paths || !scheduled_for) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+        
+        if (!Array.isArray(social_platforms) || social_platforms.length === 0) {
+            return res.status(400).json({ error: 'At least one social platform required' });
+        }
+        
+        if (!Array.isArray(image_paths) || image_paths.length === 0) {
+            return res.status(400).json({ error: 'At least one image required' });
+        }
+        
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const postData = {
+            title,
+            caption,
+            social_platforms,
+            image_paths,
+            scheduled_for: new Date(scheduled_for).toISOString(),
+            status: 'scheduled'
+        };
+        
+        const { data, error } = await supabase
+            .from('scheduled_posts')
+            .insert([postData])
+            .select()
+            .single();
+        
+        if (error) {
+            console.error('Error creating scheduled post:', error);
+            return res.status(500).json({ error: 'Failed to create scheduled post' });
+        }
+        
+        console.log(`✅ Scheduled post created: ${title} for ${scheduled_for}`);
+        res.json({ success: true, post: data });
+    } catch (error) {
+        console.error('Create scheduled post error:', error);
+        res.status(500).json({ error: 'Failed to create scheduled post' });
+    }
+});
+
+// Post a scheduled post immediately
+app.post('/api/schedule/posts/:id/post-now', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        // Get the scheduled post
+        const { data: post, error: fetchError } = await supabase
+            .from('scheduled_posts')
+            .select('*')
+            .eq('id', id)
+            .single();
+        
+        if (fetchError || !post) {
+            return res.status(404).json({ error: 'Scheduled post not found' });
+        }
+        
+        if (post.status !== 'scheduled') {
+            return res.status(400).json({ error: 'Post is not in scheduled status' });
+        }
+        
+        // TODO: Implement actual posting logic for different platforms
+        // For now, just mark as posted
+        const { error: updateError } = await supabase
+            .from('scheduled_posts')
+            .update({ 
+                status: 'posted', 
+                posted_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        
+        if (updateError) {
+            console.error('Error updating post status:', updateError);
+            return res.status(500).json({ error: 'Failed to update post status' });
+        }
+        
+        console.log(`✅ Posted scheduled post immediately: ${post.title}`);
+        res.json({ success: true, message: 'Post published successfully' });
+    } catch (error) {
+        console.error('Post now error:', error);
+        res.status(500).json({ error: 'Failed to post now' });
+    }
+});
+
+// Cancel a scheduled post
+app.post('/api/schedule/posts/:id/cancel', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const { error } = await supabase
+            .from('scheduled_posts')
+            .update({ 
+                status: 'cancelled',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
+        
+        if (error) {
+            console.error('Error cancelling post:', error);
+            return res.status(500).json({ error: 'Failed to cancel post' });
+        }
+        
+        console.log(`✅ Cancelled scheduled post: ${id}`);
+        res.json({ success: true, message: 'Post cancelled successfully' });
+    } catch (error) {
+        console.error('Cancel post error:', error);
+        res.status(500).json({ error: 'Failed to cancel post' });
+    }
+});
+
+// Delete a scheduled post
+app.delete('/api/schedule/posts/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const { error } = await supabase
+            .from('scheduled_posts')
+            .delete()
+            .eq('id', id);
+        
+        if (error) {
+            console.error('Error deleting scheduled post:', error);
+            return res.status(500).json({ error: 'Failed to delete scheduled post' });
+        }
+        
+        console.log(`✅ Deleted scheduled post: ${id}`);
+        res.json({ success: true, message: 'Post deleted successfully' });
+    } catch (error) {
+        console.error('Delete scheduled post error:', error);
+        res.status(500).json({ error: 'Failed to delete scheduled post' });
+    }
+});
+
+// Serve image for schedule page
+app.get('/api/gallery/image/:imagePath', async (req, res) => {
+    try {
+        const imagePath = decodeURIComponent(req.params.imagePath);
+        
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        
+        const { data: urlData } = supabase.storage
+            .from('generated-images')
+            .getPublicUrl(imagePath);
+        
+        // Redirect to the public URL
+        res.redirect(urlData.publicUrl);
+    } catch (error) {
+        console.error('Error serving image:', error);
+        res.status(404).json({ error: 'Image not found' });
     }
 });
 

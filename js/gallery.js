@@ -13,6 +13,9 @@ class Gallery {
         this.notifyMode = false;
         this.selectedImages = [];
         
+        // Scheduling system
+        this.scheduleMode = false;
+        
         this.initElements();
         this.initEventListeners();
         this.initializeDropdowns();
@@ -83,6 +86,19 @@ class Gallery {
         this.proceedButton = document.getElementById('proceedButton');
         this.selectedCount = document.getElementById('selectedCount');
         this.proceedBtn = document.getElementById('proceedBtn');
+        
+        // Schedule elements
+        this.scheduleModeBtn = document.getElementById('scheduleModeBtn');
+        this.scheduleModal = document.getElementById('scheduleModal');
+        this.scheduleModalClose = document.getElementById('scheduleModalClose');
+        this.postTitle = document.getElementById('postTitle');
+        this.postCaption = document.getElementById('postCaption');
+        this.scheduleDateTime = document.getElementById('scheduleDateTime');
+        this.scheduleImageCount = document.getElementById('scheduleImageCount');
+        this.scheduleImageGrid = document.getElementById('scheduleImageGrid');
+        this.cancelScheduleBtn = document.getElementById('cancelScheduleBtn');
+        this.postNowBtn = document.getElementById('postNowBtn');
+        this.schedulePostBtn = document.getElementById('schedulePostBtn');
         this.emailModal = document.getElementById('emailModal');
         this.emailModalClose = document.getElementById('emailModalClose');
         this.recipientEmail = document.getElementById('recipientEmail');
@@ -141,20 +157,34 @@ class Gallery {
         
         // Email notification event listeners
         this.notifyModeBtn.addEventListener('click', () => this.toggleNotifyMode());
-        this.proceedBtn.addEventListener('click', () => this.openEmailModal());
+        this.proceedBtn.addEventListener('click', () => this.handleProceedClick());
         this.emailModalClose.addEventListener('click', () => this.closeEmailModal());
         this.cancelEmailBtn.addEventListener('click', () => this.closeEmailModal());
         this.sendEmailBtn.addEventListener('click', () => this.sendEmail());
+        
+        // Schedule event listeners
+        this.scheduleModeBtn.addEventListener('click', () => this.toggleScheduleMode());
+        this.scheduleModalClose.addEventListener('click', () => this.closeScheduleModal());
+        this.cancelScheduleBtn.addEventListener('click', () => this.closeScheduleModal());
+        this.postNowBtn.addEventListener('click', () => this.postSelectedImagesNow());
+        this.schedulePostBtn.addEventListener('click', () => this.scheduleSelectedPosts());
         
         // Close email modal when clicking outside
         this.emailModal.addEventListener('click', (e) => {
             if (e.target === this.emailModal) this.closeEmailModal();
         });
         
+        // Close schedule modal when clicking outside
+        this.scheduleModal.addEventListener('click', (e) => {
+            if (e.target === this.scheduleModal) this.closeScheduleModal();
+        });
+        
         // Keyboard navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (this.emailModal.style.display !== 'none') {
+                if (this.scheduleModal.style.display !== 'none') {
+                    this.closeScheduleModal();
+                } else if (this.emailModal.style.display !== 'none') {
                     this.closeEmailModal();
                 } else if (this.imageModal.style.display !== 'none') {
                     this.closeModal();
@@ -275,9 +305,9 @@ class Gallery {
         const item = document.createElement('div');
         item.className = 'gallery-item';
         
-        // Add notify mode class if in notify mode
-        if (this.notifyMode) {
-            item.classList.add('notify-mode');
+        // Add notify/schedule mode class if in either mode
+        if (this.notifyMode || this.scheduleMode) {
+            item.classList.add(this.notifyMode ? 'notify-mode' : 'schedule-mode');
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.toggleImageSelection(image);
@@ -1072,6 +1102,14 @@ class Gallery {
         
         if (count > 0) {
             this.selectedCount.textContent = `${count} image${count > 1 ? 's' : ''} selected`;
+            
+            // Update proceed button text based on mode
+            if (this.scheduleMode) {
+                this.proceedBtn.textContent = 'Schedule';
+            } else if (this.notifyMode) {
+                this.proceedBtn.textContent = 'Proceed';
+            }
+            
             this.proceedButton.style.display = 'block';
         } else {
             this.proceedButton.style.display = 'none';
@@ -1212,6 +1250,286 @@ class Gallery {
             this.sendEmailBtn.disabled = false;
             this.sendEmailBtn.textContent = 'Send Email';
         }
+    }
+
+    // Scheduling System Methods
+    toggleScheduleMode() {
+        this.scheduleMode = !this.scheduleMode;
+        this.scheduleModeBtn.classList.toggle('active', this.scheduleMode);
+        
+        if (this.scheduleMode) {
+            // Disable notify mode if it's active
+            if (this.notifyMode) {
+                this.toggleNotifyMode();
+            }
+            
+            // Enable schedule mode
+            this.selectedImages = [];
+            this.updateProceedButton();
+            this.renderFilteredGallery(); // Re-render to add schedule mode classes
+        } else {
+            // Disable schedule mode
+            this.selectedImages = [];
+            this.proceedButton.style.display = 'none';
+            this.renderFilteredGallery(); // Re-render to remove schedule mode classes
+        }
+    }
+
+    handleProceedClick() {
+        if (this.notifyMode) {
+            this.openEmailModal();
+        } else if (this.scheduleMode) {
+            this.openScheduleModal();
+        }
+    }
+
+    openScheduleModal() {
+        if (this.selectedImages.length === 0) {
+            alert('Please select at least one image to schedule.');
+            return;
+        }
+        
+        // Generate a default caption based on first image
+        this.generateDefaultCaption();
+        
+        // Set default schedule time to 1 hour from now
+        const defaultTime = new Date();
+        defaultTime.setHours(defaultTime.getHours() + 1);
+        this.scheduleDateTime.value = defaultTime.toISOString().slice(0, 16);
+        
+        // Populate schedule modal with selected images
+        this.populateScheduleModal();
+        this.scheduleModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    closeScheduleModal() {
+        this.scheduleModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+
+    populateScheduleModal() {
+        // Update image count
+        this.scheduleImageCount.textContent = this.selectedImages.length;
+        
+        // Clear and populate image grid
+        this.scheduleImageGrid.innerHTML = '';
+        
+        this.selectedImages.forEach((image, index) => {
+            const imageItem = document.createElement('div');
+            imageItem.className = 'schedule-image-item';
+            
+            const img = document.createElement('img');
+            img.src = image.url;
+            img.alt = image.name;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'schedule-image-remove';
+            removeBtn.innerHTML = '×';
+            removeBtn.title = 'Remove from selection';
+            removeBtn.addEventListener('click', () => {
+                this.removeImageFromSchedule(index);
+            });
+            
+            imageItem.appendChild(img);
+            imageItem.appendChild(removeBtn);
+            this.scheduleImageGrid.appendChild(imageItem);
+        });
+    }
+
+    removeImageFromSchedule(index) {
+        this.selectedImages.splice(index, 1);
+        this.populateScheduleModal();
+        this.updateProceedButton();
+        
+        // If no images left, close modal
+        if (this.selectedImages.length === 0) {
+            this.closeScheduleModal();
+        }
+    }
+
+    generateDefaultCaption() {
+        const imageCount = this.selectedImages.length;
+        const models = [...new Set(this.selectedImages.map(img => this.formatModelName(img.model)))];
+        
+        let caption = '';
+        if (imageCount === 1) {
+            caption = `Transform your precious memories into beautiful keepsakes! ✨ Create lasting treasures that tell your unique story.`;
+        } else {
+            caption = `Transform your precious memories into beautiful keepsakes! ✨ ${imageCount} stunning images ready to become lasting treasures.`;
+        }
+        
+        this.postTitle.value = `Printerpix Post - ${new Date().toLocaleDateString()}`;
+        this.postCaption.value = caption + '\n\n#printerpix #memories #photobook #familymoments #personalized #keepsakes #memorymaking #photoprints';
+    }
+
+    async postSelectedImagesNow() {
+        const title = this.postTitle.value.trim();
+        const caption = this.postCaption.value.trim();
+        const platforms = this.getSelectedPlatforms();
+        
+        if (!title) {
+            alert('Please enter a post title.');
+            this.postTitle.focus();
+            return;
+        }
+        
+        if (!caption) {
+            alert('Please enter a caption.');
+            this.postCaption.focus();
+            return;
+        }
+        
+        if (platforms.length === 0) {
+            alert('Please select at least one social media platform.');
+            return;
+        }
+        
+        if (this.selectedImages.length === 0) {
+            alert('No images selected to post.');
+            return;
+        }
+        
+        this.postNowBtn.disabled = true;
+        this.postNowBtn.textContent = 'Posting...';
+        
+        try {
+            // For now, just post to Instagram (can be extended later)
+            if (platforms.includes('instagram')) {
+                await this.postToInstagram(caption);
+            }
+            
+            alert(`Successfully posted to ${platforms.join(', ')}!`);
+            
+            // Reset and close
+            this.closeScheduleModal();
+            this.toggleScheduleMode(); // Exit schedule mode
+            
+        } catch (error) {
+            console.error('Error posting now:', error);
+            alert(`Failed to post: ${error.message}`);
+        } finally {
+            this.postNowBtn.disabled = false;
+            this.postNowBtn.textContent = 'Post Now';
+        }
+    }
+
+    async scheduleSelectedPosts() {
+        const title = this.postTitle.value.trim();
+        const caption = this.postCaption.value.trim();
+        const platforms = this.getSelectedPlatforms();
+        const scheduleTime = this.scheduleDateTime.value;
+        
+        if (!title) {
+            alert('Please enter a post title.');
+            this.postTitle.focus();
+            return;
+        }
+        
+        if (!caption) {
+            alert('Please enter a caption.');
+            this.postCaption.focus();
+            return;
+        }
+        
+        if (platforms.length === 0) {
+            alert('Please select at least one social media platform.');
+            return;
+        }
+        
+        if (!scheduleTime) {
+            alert('Please select a schedule time.');
+            this.scheduleDateTime.focus();
+            return;
+        }
+        
+        // Check if schedule time is in the future
+        const scheduleDate = new Date(scheduleTime);
+        if (scheduleDate <= new Date()) {
+            alert('Please select a future date and time.');
+            this.scheduleDateTime.focus();
+            return;
+        }
+        
+        if (this.selectedImages.length === 0) {
+            alert('No images selected to schedule.');
+            return;
+        }
+        
+        this.schedulePostBtn.disabled = true;
+        this.schedulePostBtn.textContent = 'Scheduling...';
+        
+        try {
+            const scheduleData = {
+                title,
+                caption,
+                social_platforms: platforms,
+                image_paths: this.selectedImages.map(img => img.path),
+                scheduled_for: scheduleDate.toISOString()
+            };
+            
+            const response = await fetch('/api/schedule/posts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(scheduleData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            alert(`Post scheduled successfully for ${scheduleDate.toLocaleString()}!`);
+            
+            // Reset and close
+            this.closeScheduleModal();
+            this.toggleScheduleMode(); // Exit schedule mode
+            
+        } catch (error) {
+            console.error('Error scheduling post:', error);
+            alert(`Failed to schedule post: ${error.message}`);
+        } finally {
+            this.schedulePostBtn.disabled = false;
+            this.schedulePostBtn.textContent = 'Schedule Post';
+        }
+    }
+
+    getSelectedPlatforms() {
+        const platformCheckboxes = document.querySelectorAll('.platform-checkbox input[type="checkbox"]');
+        return Array.from(platformCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+    }
+
+    async postToInstagram(caption) {
+        // Use the first selected image for Instagram posting
+        const firstImage = this.selectedImages[0];
+        if (!firstImage) return;
+        
+        const imageBlob = await this.getImageBlob(firstImage.url);
+        
+        const formData = new FormData();
+        formData.append('image', imageBlob, 'scheduled-post.png');
+        formData.append('caption', caption);
+        formData.append('model', firstImage.model);
+        
+        const response = await fetch('/api/instagram/post', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+        
+        return await response.json();
+    }
+
+    async getImageBlob(imageSrc) {
+        const response = await fetch(imageSrc);
+        return await response.blob();
     }
 }
 

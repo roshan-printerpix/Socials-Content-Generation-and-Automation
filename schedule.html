@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Printerpix Studio - Schedule</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/navbar.css">
+    <link rel="stylesheet" href="css/schedule.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="container">
+        <div class="schedule-header">
+            <h1>Scheduled Posts</h1>
+            <div class="schedule-controls">
+                <div class="status-filter">
+                    <select id="statusFilter" class="status-select">
+                        <option value="">All Status</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="posted">Posted</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="platform-filter">
+                    <select id="platformFilter" class="platform-select">
+                        <option value="">All Platforms</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="twitter">Twitter</option>
+                        <option value="linkedin">LinkedIn</option>
+                    </select>
+                </div>
+                <button id="refreshBtn" class="refresh-btn">Refresh</button>
+            </div>
+        </div>
+
+        <div class="schedule-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalScheduled">0</div>
+                <div class="stat-label">Total Scheduled</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pendingPosts">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="postedToday">0</div>
+                <div class="stat-label">Posted Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="failedPosts">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+        </div>
+
+        <div class="schedule-content">
+            <div id="loadingIndicator" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading scheduled posts...</p>
+            </div>
+
+            <div id="errorMessage" class="error-message" style="display: none;">
+                <p>Failed to load scheduled posts. Please check your connection.</p>
+                <button id="retryBtn" class="retry-btn">Retry</button>
+            </div>
+
+            <div id="emptySchedule" class="empty-schedule" style="display: none;">
+                <div class="empty-icon">📅</div>
+                <h3>No Scheduled Posts</h3>
+                <p>You haven't scheduled any posts yet. Go to the gallery to schedule your first post!</p>
+                <a href="/gallery.html" class="schedule-link">Go to Gallery</a>
+            </div>
+
+            <div id="scheduleList" class="schedule-list" style="display: none;">
+                <!-- Scheduled posts will be dynamically loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Post Details Modal -->
+    <div id="postModal" class="modal-overlay" style="display: none;">
+        <div class="post-modal-content">
+            <div class="post-header">
+                <h2 id="postTitle">Post Details</h2>
+                <button class="modal-close" id="postModalClose">&times;</button>
+            </div>
+            <div class="post-body">
+                <div class="post-images" id="postImages">
+                    <!-- Images will be displayed here -->
+                </div>
+                <div class="post-details">
+                    <div class="detail-group">
+                        <label>Caption:</label>
+                        <div class="caption-text" id="postCaption"></div>
+                    </div>
+                    <div class="detail-group">
+                        <label>Platforms:</label>
+                        <div class="platforms-list" id="postPlatforms"></div>
+                    </div>
+                    <div class="detail-group">
+                        <label>Scheduled For:</label>
+                        <div class="schedule-time" id="postScheduleTime"></div>
+                    </div>
+                    <div class="detail-group">
+                        <label>Status:</label>
+                        <div class="post-status" id="postStatus"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="post-actions">
+                <button id="editPostBtn" class="action-btn edit-btn">Edit</button>
+                <button id="postNowBtn" class="action-btn post-btn">Post Now</button>
+                <button id="cancelPostBtn" class="action-btn cancel-btn">Cancel</button>
+                <button id="deletePostBtn" class="action-btn delete-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/navbar.js"></script>
+    <script src="js/schedule.js"></script>
+    <script>
+        // Initialize navbar for schedule page
+        initNavbar('schedule');
+    </script>
+</body>
+
+</html>

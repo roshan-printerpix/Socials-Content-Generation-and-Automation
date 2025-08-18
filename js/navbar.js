@@ -59,6 +59,7 @@ class NavbarLoader {
                         <a href="/" class="nav-link ${this.currentPage === 'images' ? 'active' : ''}">Images</a>
                         <a href="/videos.html" class="nav-link ${this.currentPage === 'videos' ? 'active' : ''}">Videos</a>
                         <a href="/gallery.html" class="nav-link ${this.currentPage === 'gallery' ? 'active' : ''}">Gallery</a>
+                        <a href="/schedule.html" class="nav-link ${this.currentPage === 'schedule' ? 'active' : ''}">Schedule</a>
                         <a href="/prompts.html" class="nav-link ${this.currentPage === 'prompts' ? 'active' : ''}">Prompts</a>
                     </div>
                 </div>

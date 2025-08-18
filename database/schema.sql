@@ -24,10 +24,29 @@ CREATE TABLE image_tags (
     UNIQUE(storage_path, tag_id)
 );
 
+-- Table for scheduled social media posts
+CREATE TABLE scheduled_posts (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    caption TEXT NOT NULL,
+    social_platforms TEXT[] NOT NULL, -- Array of platforms: instagram, facebook, twitter, etc.
+    image_paths TEXT[] NOT NULL, -- Array of storage paths for images
+    status VARCHAR(20) DEFAULT 'scheduled', -- scheduled, posted, failed, cancelled
+    scheduled_for TIMESTAMP WITH TIME ZONE NOT NULL,
+    posted_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    error_message TEXT,
+    post_results JSONB -- Store API responses from social platforms
+);
+
 -- Indexes for performance
 CREATE INDEX idx_product_tags_name ON product_tags(name);
 CREATE INDEX idx_image_tags_storage_path ON image_tags(storage_path);
 CREATE INDEX idx_image_tags_tag_id ON image_tags(tag_id);
+CREATE INDEX idx_scheduled_posts_status ON scheduled_posts(status);
+CREATE INDEX idx_scheduled_posts_scheduled_for ON scheduled_posts(scheduled_for);
+CREATE INDEX idx_scheduled_posts_created_at ON scheduled_posts(created_at);
 
 -- Insert your product tags
 INSERT INTO product_tags (name, display_name, color, description) VALUES
