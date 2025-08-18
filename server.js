@@ -663,50 +663,66 @@ async function autoTagImage(storagePath, prompt) {
         const promptLower = prompt.toLowerCase();
         const suggestedTags = [];
 
-        // Smart tagging based on prompt content
+        // Smart tagging based on prompt content - Focus on main product types
+        // Priority order: canvas, photo-book, mug, blanket (most common products)
         const tagKeywords = {
-            'lab-print': ['professional', 'high quality', 'premium', 'lab', 'print', 'photo'],
+            // Main priority products
+            'canvas': ['canvas', 'art', 'painting', 'wall art', 'artwork', 'gallery', 'wall', 'display', 'framed', 'hanging'],
+            'photo-book': ['book', 'album', 'memories', 'collection', 'story', 'family', 'pages', 'flip', 'coffee table'],
+            'mug': ['mug', 'coffee', 'tea', 'cup', 'drink', 'morning', 'kitchen', 'beverage', 'ceramic'],
+            'blanket': ['blanket', 'cozy', 'warm', 'comfort', 'soft', 'cuddle', 'throw', 'sofa', 'bed', 'snuggle'],
+            
+            // Secondary products (less likely to be auto-tagged)
             'photo-prints': ['photo', 'print', 'picture', 'image', 'standard', 'classic'],
-            'metal-print': ['metal', 'aluminum', 'modern', 'sleek', 'contemporary', 'durable'],
-            'slate': ['slate', 'stone', 'natural', 'rustic', 'elegant', 'unique'],
-            'blanket': ['blanket', 'cozy', 'warm', 'comfort', 'soft', 'cuddle', 'throw'],
-            'poster': ['poster', 'wall', 'large', 'display', 'room', 'decoration'],
-            'canvas': ['canvas', 'art', 'painting', 'wall art', 'artwork', 'gallery'],
-            'puzzle': ['puzzle', 'game', 'fun', 'family', 'activity', 'pieces'],
-            'pillow': ['pillow', 'cushion', 'sofa', 'bed', 'comfort', 'home', 'decor'],
-            'calendar': ['calendar', 'date', 'month', 'year', 'schedule', 'planning', 'time'],
-            'mug': ['mug', 'coffee', 'tea', 'cup', 'drink', 'morning', 'kitchen'],
-            'frame': ['frame', 'framed', 'border', 'display', 'wall', 'elegant'],
-            'stationery': ['stationery', 'paper', 'note', 'card', 'writing', 'office'],
-            'bottle': ['bottle', 'water', 'drink', 'portable', 'travel', 'hydration'],
-            'greeting-card': ['card', 'greeting', 'birthday', 'celebration', 'holiday', 'congratulations'],
-            'photo-strip': ['strip', 'booth', 'fun', 'party', 'event', 'memories'],
-            'photo-book': ['book', 'album', 'memories', 'collection', 'story', 'family'],
-            'photo-tile': ['tile', 'mosaic', 'wall', 'decoration', 'artistic', 'modern'],
-            'mouse-mat': ['mouse', 'pad', 'desk', 'office', 'computer', 'workspace']
+            'frame': ['frame', 'framed', 'border', 'display', 'elegant'],
+            'pillow': ['pillow', 'cushion', 'sofa', 'bed', 'home', 'decor'],
+            'poster': ['poster', 'large', 'room', 'decoration']
         };
 
-        // Check each tag for keyword matches
-        tags.forEach(tag => {
-            const keywords = tagKeywords[tag.name] || [];
-            const hasMatch = keywords.some(keyword => promptLower.includes(keyword));
-
-            if (hasMatch) {
-                suggestedTags.push(tag.id);
+        // Check main priority products first
+        const priorityProducts = ['canvas', 'photo-book', 'mug', 'blanket'];
+        const secondaryProducts = ['photo-prints', 'frame', 'pillow', 'poster'];
+        
+        // Check priority products first
+        priorityProducts.forEach(productName => {
+            const tag = tags.find(t => t.name === productName);
+            if (tag) {
+                const keywords = tagKeywords[productName] || [];
+                const hasMatch = keywords.some(keyword => promptLower.includes(keyword));
+                if (hasMatch && !suggestedTags.includes(tag.id)) {
+                    suggestedTags.push({ id: tag.id, name: productName, priority: 1 });
+                }
             }
         });
 
-        // Always add some default tags based on common use cases
-        const defaultTags = ['photo-prints', 'photo-book', 'canvas'];
-        defaultTags.forEach(tagName => {
-            const tag = tags.find(t => t.name === tagName);
-            if (tag && !suggestedTags.includes(tag.id)) {
-                suggestedTags.push(tag.id);
-            }
-        });
+        // Only check secondary products if we don't have enough priority matches
+        if (suggestedTags.length < 2) {
+            secondaryProducts.forEach(productName => {
+                const tag = tags.find(t => t.name === productName);
+                if (tag) {
+                    const keywords = tagKeywords[productName] || [];
+                    const hasMatch = keywords.some(keyword => promptLower.includes(keyword));
+                    if (hasMatch && !suggestedTags.some(t => t.id === tag.id)) {
+                        suggestedTags.push({ id: tag.id, name: productName, priority: 2 });
+                    }
+                }
+            });
+        }
 
-        // Limit to 5 tags maximum
-        const finalTags = suggestedTags.slice(0, 5);
+        // If still no matches, add default fallback (canvas and photo-book as most common)
+        if (suggestedTags.length === 0) {
+            const defaultTags = ['canvas', 'photo-book'];
+            defaultTags.forEach(tagName => {
+                const tag = tags.find(t => t.name === tagName);
+                if (tag && !suggestedTags.some(t => t.id === tag.id)) {
+                    suggestedTags.push({ id: tag.id, name: tagName, priority: 3 });
+                }
+            });
+        }
+
+        // Sort by priority and limit to 2 tags maximum
+        suggestedTags.sort((a, b) => a.priority - b.priority);
+        const finalTags = suggestedTags.slice(0, 2).map(t => t.id);
 
         if (finalTags.length > 0) {
             // Insert image-tag relationships using storage path
@@ -722,7 +738,8 @@ async function autoTagImage(storagePath, prompt) {
             if (insertError) {
                 console.error('Error auto-tagging image:', insertError);
             } else {
-                console.log(`✅ Auto-tagged image ${storagePath} with ${finalTags.length} tags`);
+                const tagNames = suggestedTags.slice(0, 2).map(t => t.name).join(', ');
+                console.log(`✅ Auto-tagged image ${storagePath} with ${finalTags.length} tags: ${tagNames}`);
             }
         }
 
